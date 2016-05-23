@@ -474,6 +474,7 @@ function check_upgrade ()
   # Compare version
   if [ "$INSTALLEDVERSION" == "$CURRENTVERSION" ]; then
     echo "$BUILD is up to date."
+    echo "Installed version: $INSTALLEDVERSION"
   else
     echo "$BUILD can be updated."
     echo "Installed version: $INSTALLEDVERSION"
@@ -497,7 +498,8 @@ function check_all_upgrades ()
   local UPTODATELIST=""
   local UPDATECOUNT=0
   local UPTODATECOUNT=0
-  local INSTALLEDVERSIONLIST=""
+  local INSTALLEDVERSIONLIST1=""
+  local INSTALLEDVERSIONLIST2=""
   local CURRENTVERSIONLIST=""
   for PKG in $PKGLIST
   do
@@ -513,10 +515,11 @@ function check_all_upgrades ()
     # Compare versions and tally up-to-date and out-of-date
     if [ "$INSTALLEDVERSION" == "$CURRENTVERSION" ]; then
       UPTODATELIST["$UPTODATECOUNT"]="$BUILD"
+      INSTALLEDVERSIONLIST1["$UPTODATECOUNT"]="$INSTALLEDVERSION"
       let "UPTODATECOUNT+=1"
     else
       UPDATELIST["$UPDATECOUNT"]="$BUILD"
-      INSTALLEDVERSIONLIST["$UPDATECOUNT"]="$INSTALLEDVERSION"
+      INSTALLEDVERSIONLIST2["$UPDATECOUNT"]="$INSTALLEDVERSION"
       CURRENTVERSIONLIST["$UPDATECOUNT"]="$CURRENTVERSION"
       let "UPDATECOUNT+=1"
     fi
@@ -530,7 +533,7 @@ function check_all_upgrades ()
   local I=0
   while [ $I -lt $UPTODATECOUNT ];
   do
-    echo "Name: ${UPTODATELIST[$I]}"
+    echo "${UPTODATELIST[$I]}-${INSTALLEDVERSIONLIST1[$I]}"
     let "I+=1"
   done
 
@@ -541,7 +544,7 @@ function check_all_upgrades ()
   while [ $I -lt $UPDATECOUNT ];
   do
     echo "Name: ${UPDATELIST[$I]}"
-    echo "Installed version: ${INSTALLEDVERSIONLIST[$I]}"
+    echo "Installed version: ${INSTALLEDVERSIONLIST2[$I]}"
     echo "Current version: ${CURRENTVERSIONLIST[$I]}"
     echo ""
     let "I+=1"
@@ -749,12 +752,22 @@ function list_installed ()
 {
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$BUILD*_SBo" | sort)
 
+  # List number of installed packages
+  set -- $PKGLIST
+  echo ""
+  echo "There are $# installed packages."
+  if [ $# -eq 0 ]; then
+    return
+  fi
+
   # Loop through installed packages and list name-version
+  echo "-----------------------------------------------------------------------"
   local PKG=""
   for PKG in $PKGLIST
   do
     echo $(basename "$PKG")
   done
+  echo ""
 }
 
 ################################################################################
