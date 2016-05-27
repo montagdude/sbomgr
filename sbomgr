@@ -476,7 +476,7 @@ function check_upgrade ()
     echo "$BUILD is up to date."
     echo "Installed version: $INSTALLEDVERSION"
   else
-    echo "$BUILD can be updated."
+    echo "$BUILD can be upgraded."
     echo "Installed version: $INSTALLEDVERSION"
     echo "Current version: $CURRENTVERSION"
   fi
@@ -528,7 +528,7 @@ function check_all_upgrades ()
   # Print a summary
 
   echo ""
-  echo "$UPTODATECOUNT SlackBuilds are up-to-date."
+  echo "$UPTODATECOUNT SlackBuilds are up to date."
   echo "-----------------------------------------------------------------------"
   local I=0
   while [ $I -lt $UPTODATECOUNT ];
@@ -538,7 +538,7 @@ function check_all_upgrades ()
   done
 
   echo ""
-  echo "$UPDATECOUNT SlackBuilds are can be updated."
+  echo "$UPDATECOUNT SlackBuilds can be upgraded."
   echo "-----------------------------------------------------------------------"
   I=0
   while [ $I -lt $UPDATECOUNT ];
