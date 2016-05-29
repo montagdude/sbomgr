@@ -487,7 +487,7 @@ function check_upgrade ()
 function check_all_upgrades ()
 {
   # Get list of installed SlackBuilds
-  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_SBo")
+  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_SBo" | sort)
 
   # Loop through installed packages and check for updates
   local PKG=""
