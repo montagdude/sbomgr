@@ -251,6 +251,18 @@ function remove_slackbuild ()
 }
 
 ################################################################################
+# Removes SlackBuilds matching a list of patterns
+function remove_multiple ()
+{
+  local PATTERNS="$@"
+  local PATTERN=""
+  for PATTERN in $PATTERNS
+  do
+    remove_slackbuild "$PATTERN"
+  done
+}
+
+################################################################################
 # Extracts URLs of source files to download
 function sources_from_info ()
 {
@@ -313,7 +325,7 @@ function install_slackbuild ()
 
   if [[ "$SOURCEDIR" != "" && "$SOURCESPEC" != "sources" ]]; then
     echo "Error: unrecognized command line option. Try sbomgr --help."
-    return
+    exit 1
   fi
 
   # Get SlackBuild path
@@ -321,7 +333,7 @@ function install_slackbuild ()
   local BUILDPATH=$(find . -maxdepth 2 -mindepth 2 -name "$BUILD")
   if [ "$BUILDPATH" == "" ]; then
     echo "Error: there is no SlackBuild named $BUILD."
-    return
+    exit 1
   fi
 
   # Check if SlackBuild is installed on system and get package name
@@ -389,7 +401,7 @@ function install_slackbuild ()
       SOURCE=$(basename "$SOURCE")
       if [ "$(find "$SOURCEDIR" -maxdepth 1 -name "$SOURCE")" == "" ]; then
         echo "Error: source file $SOURCE not present in $SOURCEDIR."
-        return
+        exit 1
       else
         cp "$SOURCEDIR/$SOURCE" .
       fi
@@ -399,7 +411,7 @@ function install_slackbuild ()
       CHKDNLD=$(wget "$SOURCE")
       if [ $? != 0 ]; then         
         echo "There was an error downloading the source file."
-        return
+        exit 1
       fi
     fi
 
@@ -409,7 +421,7 @@ function install_slackbuild ()
     MD5CHK=$(echo $MD5CHK | cut -d' ' -f1)
     if [ "$MD5CHK" != "${MD5ARRAY[$COUNT]}" ]; then
       echo "Error: md5sum check failed on $SOURCE."
-      return
+      exit 1
     fi
  
     let "COUNT+=1"
@@ -423,7 +435,7 @@ function install_slackbuild ()
   PKG=$(find /tmp -maxdepth 1 -name "*$BUILD*")
   if [ "$PKG" == "" ]; then
     echo "An error occurred. $BUILD was not installed."
-    return
+    exit 1
   fi
 
   # Install compiled package
@@ -443,6 +455,18 @@ function install_slackbuild ()
   if [[ -f 'README.Slackware' || -f 'README.Slackware' ]]; then
     echo "Note: Slackware notes found. You should read them with 'sbomgr info $BUILD.'"
   fi
+}
+
+################################################################################
+# Installs or reinstalls multiple SlackBuilds
+function install_multiple ()
+{
+  local BUILDS="$@"
+  local BUILD=""
+  for BUILD in $BUILDS
+  do
+    install_slackbuild "$BUILD"
+  done
 }
 
 ################################################################################
@@ -829,15 +853,18 @@ function print_usage ()
   echo "       update                 Syncs git repo with local copy. Use"
   echo "                                before updating."
   echo ""
-  echo "       install SLACKBUILD     Installs or reinstalls the specified"
-  echo "                                  SlackBuild."
+  echo "       install SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
+  echo "                              Installs or reinstalls the specified"
+  echo "                                  SlackBuilds."
   echo ""
   echo "       install SLACKBUILD sources=DIRECTORY"
   echo "                              Copies source code from specified"
-  echo "                                directory instead of downloading."
+  echo "                                directory instead of downloading. Can"
+  echo "                                only be used to install one at a time."
   echo ""
-  echo "       remove PATTERN         Optionally removes installed SlackBuilds"
-  echo "                                matching PATTERN."
+  echo "       remove PATTERN1 [PATTERN2 PATTERN3 ...]"
+  echo "                              Optionally removes SlackBuilds matching"
+  echo "                              the specified PATTERNs."
   echo ""
   echo "       check-upgrade SLACKBUILD"
   echo "                              Checks the specified SlackBuild for"
@@ -885,25 +912,35 @@ if [ $# -lt 1 ]; then
 elif [ "$1" == "update" ]; then
   update 
 
-# install SLACKBUILD and
+# install SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...] and
 # install SLACKBUILD sources={DIRECTORY}
 elif [ "$1" == "install" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify SlackBuild with install option."
-  else
-    if [ $# -eq 2 ]; then
-      install_slackbuild $2
+  elif [ $# -eq 2 ]; then
+    install_slackbuild $2
+  elif [ $# -eq 3 ]; then
+    if [ "${3%=*}" == "sources" ]; then
+      # Source directory is specified for single SlackBuild
+      install_slackbuild $2 $3    
     else
-      install_slackbuild $2 $3
+      # Install multiple SlackBuilds (strip off the first argument)
+      install_multiple "${@:2:$#}"
     fi
+  else
+    # Install multiple SlackBuilds (strip off the first argument)
+    install_multipe "${@:2:$#}" 
   fi
 
-# remove PATTERN
+# remove PATTERN1 [PATTERN2 PATTERN3 ...]
 elif [ "$1" == "remove" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify PATTERN with remove option."
-  else
+  elif [ $# -eq 2 ]; then
     remove_slackbuild $2
+  else
+    # Remove multiple SlackBuilds (strip off the first argument)
+    remove_multiple "${@:2:$#}"
   fi 
 
 # check-upgrade SLACKBUILD
