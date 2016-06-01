@@ -930,7 +930,7 @@ elif [ "$1" == "install" ]; then
     fi
   else
     # Install multiple SlackBuilds (strip off the first argument)
-    install_multipe "${@:2:$#}" 
+    install_multiple "${@:2:$#}" 
   fi
 
 # remove PATTERN1 [PATTERN2 PATTERN3 ...]
