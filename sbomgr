@@ -390,6 +390,8 @@ function install_slackbuild ()
   local SOURCES=$(sources_from_info "$BUILD".info)
   local CHKDNLD=""
   local MD5CHK=""
+  local SOURCERR=0
+  local MD5ERR=0
   COUNT=0
   for SOURCE in $SOURCES
   do
@@ -412,7 +414,7 @@ function install_slackbuild ()
       CHKDNLD=$(wget "$SOURCE")
       if [ $? != 0 ]; then         
         echo "There was an error downloading the source file."
-        exit 1
+        SOURCERR=1
       fi
     fi
 
@@ -422,11 +424,28 @@ function install_slackbuild ()
     MD5CHK=$(echo $MD5CHK | cut -d' ' -f1)
     if [ "$MD5CHK" != "${MD5ARRAY[$COUNT]}" ]; then
       echo "Error: md5sum check failed on $SOURCE."
-      exit 1
+      MD5ERR=1
     fi
  
     let "COUNT+=1"
   done
+
+  # Exit if something went wrong
+  if [[ $SOURCERR -eq 1 || $MD5ERR -eq 1 ]]; then
+    if [ $SOURCERR -eq 1 ]; then
+      echo "One or more sources failed to download."
+    fi
+    if [ $MD5ERR -eq 1 ]; then
+      echo "One or more sources failed the md5sum check."
+    fi
+
+    # Remove source code
+    for SOURCE in $SOURCES
+    do
+      rm $(basename "$SOURCE")
+    done
+    exit 1
+  fi
 
   # Execute install script
   chmod +x $BUILD.SlackBuild
