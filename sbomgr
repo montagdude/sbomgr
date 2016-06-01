@@ -430,13 +430,28 @@ function install_slackbuild ()
     let "COUNT+=1"
   done
 
+  # Execute install script
+  chmod +x $BUILD.SlackBuild
+  ./$BUILD.SlackBuild
+
+  # Exit if not successful
+  local BUILDERR=0
+  PKG=$(find /tmp -maxdepth 1 -name "*$BUILD*")
+  if [ "$PKG" == "" ]; then
+    echo "Error: build failed."
+    BUILDERR=1
+  fi
+
   # Exit if something went wrong
-  if [[ $SOURCERR -eq 1 || $MD5ERR -eq 1 ]]; then
+  if [[ $SOURCERR -eq 1 || $MD5ERR -eq 1 || $BUILDERR -eq 1 ]]; then
     if [ $SOURCERR -eq 1 ]; then
       echo "One or more sources failed to download."
     fi
     if [ $MD5ERR -eq 1 ]; then
       echo "One or more sources failed the md5sum check."
+    fi
+    if [ $BUILDERR -eq 1 ]; then
+      echo "$BUILD failed to compile."
     fi
 
     # Remove source code
@@ -444,17 +459,9 @@ function install_slackbuild ()
     do
       rm $(basename "$SOURCE")
     done
-    exit 1
-  fi
 
-  # Execute install script
-  chmod +x $BUILD.SlackBuild
-  ./$BUILD.SlackBuild
-
-  # Exit if not successful
-  PKG=$(find /tmp -maxdepth 1 -name "*$BUILD*")
-  if [ "$PKG" == "" ]; then
-    echo "An error occurred. $BUILD was not installed."
+    # Discard changes to repository and exit
+    git checkout $BUILD.SlackBuild
     exit 1
   fi
 
