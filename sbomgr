@@ -203,7 +203,7 @@ function user_choice ()
 
   while ! $VALIDCHOICE
   do
-    echo $__MSG
+    echo -ne "$__MSG (y/n): "
     read TEMPCHOICE
     if [[ "$TEMPCHOICE" == "y" || "$TEMPCHOICE" == "Y" ]]; then
       TEMPCHOICE="y"
@@ -242,7 +242,7 @@ function remove_slackbuild ()
     # Ask for confirmation before removing
     do
       PKG=$(basename "$PKG")
-      MSG="Found package $PKG. Remove? (y/n): "
+      MSG="Found package $PKG. Remove?"
       user_choice "$MSG" CHOICE
       if [ "$CHOICE" == "y" ]; then
         removepkg "$PKG"
@@ -268,6 +268,12 @@ function remove_multiple ()
 function sources_from_info ()
 {
   local INFILE=$1
+  if [ $# -eq 2 ]; then
+    local FORCE32=$2
+  else
+    local FORCE32="noforce-32-bit"
+  fi
+  local FORCE32=$2
   local SOURCES=""
   local ARCH=$(uname -m)
 
@@ -279,9 +285,9 @@ function sources_from_info ()
     SOURCES=$DOWNLOAD_x86_64
   fi
 
-  # Use regular DOWNLOAD= line for x86 architecture or if there's no 64-bit
-  # download
-  if [[ "$ARCH" != "x86_64" || "$SOURCES" == "" ]]; then
+  # Use regular DOWNLOAD= line for x86 architecture, if there's no 64-bit
+  # download, or if forcing 32-bit
+  if [[ "$ARCH" != "x86_64" || "$SOURCES" == "" || "$FORCE32" == "force-32-bit" ]]; then
     SOURCES=$DOWNLOAD
   fi
 
@@ -293,6 +299,11 @@ function sources_from_info ()
 function md5sums_from_info ()
 {
   local INFILE=$1
+  if [ $# -eq 2 ]; then
+    local FORCE32=$2
+  else
+    local FORCE32="noforce-32-bit"
+  fi
   local MD5SUMS=""
   local ARCH=$(uname -m)
 
@@ -304,9 +315,9 @@ function md5sums_from_info ()
     MD5SUMS=$MD5SUM_x86_64
   fi
 
-  # Use regular MD5SUM= line for x86 architecture or if there's no 64-bit
-  # download
-  if [[ "$ARCH" != "x86_64" || "$MD5SUMS" == "" ]]; then
+  # Use regular MD5SUM= line for x86 architecture, if there's no 64-bit
+  # download, or if forcing 32-bit
+  if [[ "$ARCH" != "x86_64" || "$MD5SUMS" == "" || "$FORCE32" == "force-32-bit" ]]; then
     MD5SUMS=$MD5SUM
   fi
 
@@ -349,11 +360,11 @@ function install_slackbuild ()
 
     # Current version already installed - ask for reinstallation
     if [ "$INSTALLEDVERSION" == "$CURRENTVERSION" ]; then
-      MSG="$BUILD is already at the most recent version.  Reinstall? (y/n): "
+      MSG="$BUILD is already at the most recent version. Reinstall?"
 
     # Installed version out of date - ask for reinstallation
     else
-      MSG="$BUILD is already installed but out of date. Reinstall? (y/n): "
+      MSG="$BUILD is already installed but out of date. Reinstall?"
     fi
 
     # Remove package or return
@@ -375,8 +386,27 @@ function install_slackbuild ()
   # Go to SlackBuild directory
   cd $BUILDPATH
 
+  # Determine source download strings
+  local SOURCES=$(sources_from_info "$BUILD".info)
+
+  # Some SlackBuilds have an UNSUPPORTED string if it's not supported on
+  # 64-bit
+  local FORCE32="no-force-32-bit"
+  local ARCH=$(uname -m)
+  if [[ "$ARCH" == "x86_64" && "$SOURCES" == "UNSUPPORTED" ]]; then
+    local CHOICE=""
+    local MSG="$BUILD is unsupported on x86_64, but it may work with mutlilib.\nTry installing 32-bit version?"
+    user_choice "$MSG" CHOICE
+    if [ "$CHOICE" == "y" ]; then
+      FORCE32="force-32-bit"
+      SOURCES=$(sources_from_info "$BUILD".info $FORCE32)
+    else
+      exit 1
+    fi
+  fi
+
   # Get MD5sums for source downloads and put them into an array
-  local MD5SUMS=$(md5sums_from_info "$BUILD".info)
+  local MD5SUMS=$(md5sums_from_info "$BUILD".info $FORCE32)
   local MD5ARRAY=""
   local ITEM=""
   local COUNT=0
@@ -386,8 +416,7 @@ function install_slackbuild ()
     let "COUNT+=1"
   done
 
-  # Download or copy sources
-  local SOURCES=$(sources_from_info "$BUILD".info)
+  # Download and check MD5SUMs
   local CHKDNLD=""
   local MD5CHK=""
   local SOURCERR=0
@@ -455,14 +484,16 @@ function install_slackbuild ()
     fi
 
     # Remove source code
-    for SOURCE in $SOURCES
-    do
-      rm $(basename "$SOURCE")
-    done
-
-    # Discard changes to repository and exit
-    git checkout $BUILD.SlackBuild
-    exit 1
+    if [ "$SOURCEDIR" == "" ]; then
+      for SOURCE in $SOURCES
+      do
+        rm $(basename "$SOURCE")
+      done
+  
+      # Discard changes to repository and exit
+      git checkout $BUILD.SlackBuild
+      exit 1
+    fi
   fi
 
   # Install compiled package
@@ -470,16 +501,18 @@ function install_slackbuild ()
 
   # Remove temporary files and source code
   rm $PKG
-  for SOURCE in $SOURCES
-  do
-    rm $(basename "$SOURCE")
-  done
+  if [ "$SOURCEDIR" == "" ]; then
+    for SOURCE in $SOURCES
+    do
+      rm $(basename "$SOURCE")
+    done
+  fi
 
   # Discard changes to repository (just changed permission of Slackbuild script)
   git checkout $BUILD.SlackBuild
 
   # Notify of any special Slackware instructions
-  if [[ -f 'README.Slackware' || -f 'README.Slackware' ]]; then
+  if [[ -f 'README.SLACKWARE' || -f 'README.Slackware' ]]; then
     echo "Note: Slackware notes found. You should read them with 'sbomgr info $BUILD.'"
   fi
 }
