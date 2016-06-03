@@ -221,45 +221,40 @@ function user_choice ()
 }
 
 ################################################################################
-# Removes a package with SlackBuild containing a given string
+# Removes a SlackBuild
 function remove_slackbuild ()
 {
-  local PATTERN=$1
-  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$PATTERN*_SBo")
+  local BUILD=$1
+  local INSTALLEDPKG=$(check_installed "$BUILD")
 
-  # Return if no matching packages were found
-  if [ "$PKGLIST" == "" ]; then
-    echo "No installed SlackBuilds matching pattern $PATTERN."
+  # Return if package is not installed
+  if [ "$INSTALLEDPKG" == "Not installed" ]; then
+    echo "There is no installed SlackBuild called $BUILD."
     exit 1
 
-  # Loop through list of packages matching BUILD string
+  # Otherwise remove the package
   else
-    local PKG=""
     local CHOICE=""
     local MSG=""
-    for PKG in $PKGLIST
     
     # Ask for confirmation before removing
-    do
-      PKG=$(basename "$PKG")
-      MSG="Found package $PKG. Remove?"
-      user_choice "$MSG" CHOICE
-      if [ "$CHOICE" == "y" ]; then
-        removepkg "$PKG"
-      fi 
-    done
+    MSG="Remove $BUILD?"
+    user_choice "$MSG" CHOICE
+    if [ "$CHOICE" == "y" ]; then
+      removepkg "$INSTALLEDPKG"
+    fi 
   fi
 }
 
 ################################################################################
-# Removes SlackBuilds matching a list of patterns
+# Removes multiple SlackBuilds
 function remove_multiple ()
 {
-  local PATTERNS="$@"
-  local PATTERN=""
-  for PATTERN in $PATTERNS
+  local BUILDS="$@"
+  local BUILD=""
+  for BUILD in $BUILDS
   do
-    remove_slackbuild "$PATTERN"
+    remove_slackbuild "$BUILD"
   done
 }
 
@@ -922,9 +917,9 @@ function print_usage ()
   echo "                                directory instead of downloading. Can"
   echo "                                only be used to install one at a time."
   echo ""
-  echo "       remove PATTERN1 [PATTERN2 PATTERN3 ...]"
-  echo "                              Optionally removes SlackBuilds matching"
-  echo "                              the specified PATTERNs."
+  echo "       remove SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
+  echo "                              Optionally removes the specified"
+  echo "                              SlackBuilds."
   echo ""
   echo "       check-upgrade SLACKBUILD"
   echo "                              Checks the specified SlackBuild for"
@@ -992,10 +987,10 @@ elif [ "$1" == "install" ]; then
     install_multiple "${@:2:$#}" 
   fi
 
-# remove PATTERN1 [PATTERN2 PATTERN3 ...]
+# remove SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]
 elif [ "$1" == "remove" ]; then
   if [ $# -eq 1 ]; then
-    print_usage "must specify PATTERN with remove option."
+    print_usage "must specify SlackBuild with remove option."
   elif [ $# -eq 2 ]; then
     remove_slackbuild $2
   else
