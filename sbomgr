@@ -280,7 +280,7 @@ function sources_from_info ()
     SOURCES=$DOWNLOAD_x86_64
   fi
 
-  # Use regular DOWNLOAD= line for x86 architecture, if there's no 64-bit
+  # Use regular DOWNLOAD= line for x86 architecture, if there's no 64-bit source
   # download, or if forcing 32-bit
   if [[ "$ARCH" != "x86_64" || "$SOURCES" == "" || "$FORCE32" == "force-32-bit" ]]; then
     SOURCES=$DOWNLOAD
@@ -299,6 +299,7 @@ function md5sums_from_info ()
   else
     local FORCE32="noforce-32-bit"
   fi
+  local SOURCES=""
   local MD5SUMS=""
   local ARCH=$(uname -m)
 
@@ -307,12 +308,13 @@ function md5sums_from_info ()
 
   # First try to use MD5SUM_x86_64 link for 64-bit
   if [ "$ARCH" == "x86_64" ]; then
+    SOURCES=$DOWNLOAD_x86_64
     MD5SUMS=$MD5SUM_x86_64
   fi
 
-  # Use regular MD5SUM= line for x86 architecture, if there's no 64-bit
+  # Use regular MD5SUM= line for x86 architecture, if there's no 64-bit source
   # download, or if forcing 32-bit
-  if [[ "$ARCH" != "x86_64" || "$MD5SUMS" == "" || "$FORCE32" == "force-32-bit" ]]; then
+  if [[ "$ARCH" != "x86_64" || "$SOURCES" == "" || "$FORCE32" == "force-32-bit" ]]; then
     MD5SUMS=$MD5SUM
   fi
 
@@ -454,29 +456,34 @@ function install_slackbuild ()
     let "COUNT+=1"
   done
 
-  # Execute install script
-  chmod +x $BUILD.SlackBuild
-  ./$BUILD.SlackBuild
-
-  # Exit if not successful
-  local BUILDERR=0
-  PKG=$(find /tmp -maxdepth 1 -name "*$BUILD*")
-  if [ "$PKG" == "" ]; then
-    echo "Error: build failed."
-    BUILDERR=1
-  fi
-
   # Exit if something went wrong
-  if [[ $SOURCERR -eq 1 || $MD5ERR -eq 1 || $BUILDERR -eq 1 ]]; then
+  if [[ $SOURCERR -eq 1 || $MD5ERR -eq 1 ]]; then
     if [ $SOURCERR -eq 1 ]; then
       echo "One or more sources failed to download."
     fi
     if [ $MD5ERR -eq 1 ]; then
       echo "One or more sources failed the md5sum check."
     fi
-    if [ $BUILDERR -eq 1 ]; then
-      echo "$BUILD failed to compile."
+
+    # Remove source code
+    if [ "$SOURCEDIR" == "" ]; then
+      for SOURCE in $SOURCES
+      do
+        rm $(basename "$SOURCE")
+      done
+  
+      exit 1
     fi
+  fi
+
+  # Execute install script
+  chmod +x $BUILD.SlackBuild
+  ./$BUILD.SlackBuild
+
+  # Exit if not successful
+  PKG=$(find /tmp -maxdepth 1 -name "*$BUILD*")
+  if [ "$PKG" == "" ]; then
+    echo "Error: build failed."
 
     # Remove source code
     if [ "$SOURCEDIR" == "" ]; then
