@@ -322,6 +322,21 @@ function md5sums_from_info ()
 }
 
 ################################################################################
+# Removes source files
+function remove_sources ()
+{
+  local SOURCES="$@"
+  local SOURCE=""
+  for SOURCE in $SOURCES
+  do
+    SOURCE=$(basename "$SOURCE")
+    if [ -f "$SOURCE" ]; then
+      rm "$SOURCE"
+    fi
+  done
+}
+
+################################################################################
 # Installs or reinstalls SlackBuild
 function install_slackbuild ()
 {
@@ -413,6 +428,9 @@ function install_slackbuild ()
     let "COUNT+=1"
   done
 
+  # Remove any existing source files
+  remove_sources "$SOURCES"
+
   # Download and check MD5SUMs
   local CHKDNLD=""
   local MD5CHK=""
@@ -421,10 +439,6 @@ function install_slackbuild ()
   COUNT=0
   for SOURCE in $SOURCES
   do
-    if [ -f "$SOURCE" ]; then
-      rm "$SOURCE"
-    fi
-
     # Copy sources from specified directory
     if [ "$SOURCEDIR" != "" ]; then
       SOURCE=$(basename "$SOURCE")
@@ -467,11 +481,7 @@ function install_slackbuild ()
 
     # Remove source code
     if [ "$SOURCEDIR" == "" ]; then
-      for SOURCE in $SOURCES
-      do
-        rm $(basename "$SOURCE")
-      done
-  
+      remove_sources "$SOURCES"
       exit 1
     fi
   fi
@@ -487,10 +497,7 @@ function install_slackbuild ()
 
     # Remove source code
     if [ "$SOURCEDIR" == "" ]; then
-      for SOURCE in $SOURCES
-      do
-        rm $(basename "$SOURCE")
-      done
+      remove_sources "$SOURCES"
   
       # Discard changes to repository and exit
       git checkout $BUILD.SlackBuild
@@ -504,10 +511,7 @@ function install_slackbuild ()
   # Remove temporary files and source code
   rm $PKG
   if [ "$SOURCEDIR" == "" ]; then
-    for SOURCE in $SOURCES
-    do
-      rm $(basename "$SOURCE")
-    done
+    remove_sources "$SOURCES"
   fi
 
   # Discard changes to repository (just changed permission of Slackbuild script)
