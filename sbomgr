@@ -388,15 +388,18 @@ function install_slackbuild ()
     fi
   fi
 
+  # Go to SlackBuild directory
+  cd $BUILDPATH
+
+  # Get PKGTYPE (I think it is always or almost always TGZ, but anyway...)
+  local PKGTYPE=$(grep "PKGTYPE" $BUILD.SlackBuild | sed 's/.*PKGTYPE:-//' | sed 's/}*$//')
+
   # Remove any package in /tmp with $BUILD in the name (could mess up
   # installation later)
-  local PKG=$(find /tmp -maxdepth 1 -name "*$BUILD*")
+  local PKG=$(find /tmp -maxdepth 1 -name "$BUILD*.$PKGTYPE")
   if [ "$PKG" != "" ]; then
     rm $PKG
   fi
-
-  # Go to SlackBuild directory
-  cd $BUILDPATH
 
   # Determine source download strings
   local SOURCES=$(sources_from_info "$BUILD".info)
@@ -491,7 +494,7 @@ function install_slackbuild ()
   ./$BUILD.SlackBuild
 
   # Exit if not successful
-  PKG=$(find /tmp -maxdepth 1 -name "*$BUILD*")
+  PKG=$(find /tmp -maxdepth 1 -name "$BUILD*.$PKGTYPE")
   if [ "$PKG" == "" ]; then
     echo "Error: build failed."
 
