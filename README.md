@@ -1,8 +1,6 @@
 # sbomgr
-Bash script to automate installation and updates of packages from SlackBuilds.org.  Works by creating a local copy of the official git repository, running the SlackBuild scripts and reading the other files there, using Slackware's built-in installpkg and removepkg, and querying the list of installed packages in /var/log/packages.  
+sbomgr is a tool to automate installation of packages from SlackBuilds.org (SBo). It works by cloning the SBo git repository and running the SlackBuild scripts along with installpkg and removepkg.  It also keeps track of installed SBo packages, lists dependencies and inverse dependencies, searches and shows information about packages, and more. For a list of available options, just type 'sbomgr' or 'sbomgr --help'. Before first use, be sure to run 'sbomgr update' to sync the local git repository with the official one.
 
-Initial setup: 
-* Set the BRANCH variable near the top of the script as appropriate for the version of Slackware you have installed.  Use 'master' for -current; otherwise, use 14.1, 14.0, 13.37, etc.
-* Try 'sbomgr --help' for a list of commands and short descriptions.
-* During first use or before checking for upgrades, use 'sbomgr update' to sync your local git repo with the official one.
-* sbomgr is intended to be run as root.  You should make it executable and maybe make a symbolic link in /usr/sbin.
+Parameters can be edited in the configuration file /etc/sbomgr/sbomgr.conf. Use this file to set the Slackware release and other options.
+
+SlackBuild scripts are available at: https://github.com/montagdude/SlackBuilds/sbomgr
