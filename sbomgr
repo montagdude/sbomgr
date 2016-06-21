@@ -15,16 +15,11 @@
 
 #  Copyright (C) 2016 Daniel Prosser
 
-# Uncomment to use master git repo (for -stable or -current)
-REPO=git://slackbuilds.org/slackbuilds.git
-BRANCH=master
-#BRANCH=14.1
-
-# Uncomment to use Ponce's git repo (for -current only)
-#REPO=git://github.com/Ponce/slackbuilds.git
-
-# Local git directory
-CDIR=/var/cache/packages/SBo
+#
+# Load configuration
+#
+CONF=${CONF:-/etc/sbomgr}
+. $CONF/sbomgr.conf
 
 ################################################################################
 # Removes quotes around string
