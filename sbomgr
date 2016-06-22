@@ -18,8 +18,8 @@
 #
 # Load configuration
 #
-CONF=${CONF:-/etc/sbomgr}
-. $CONF/sbomgr.conf
+CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
+. $CONF
 
 ################################################################################
 # Removes quotes around string
