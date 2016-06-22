@@ -38,7 +38,7 @@ function get_installed_name ()
   local PKG=$1
 
   # Get rid of trailing stuff
-  local BUILD=${PKG%*_SBo}
+  local BUILD=${PKG%*_$TAG}
   BUILD=${BUILD%*-*}  # Architecture-number
   BUILD=${BUILD%*-*}  # Architecture
   BUILD=${BUILD%*-*}  # Version
@@ -52,7 +52,7 @@ function get_installed_version ()
   local PKG=$1
 
   # Get rid of trailing stuff
-  local VERSION=${PKG%*_SBo}
+  local VERSION=${PKG%*_$TAG}
   VERSION=${VERSION%*-*}  # Architecture-number
   VERSION=${VERSION%*-*}  # Architecture
 
@@ -129,15 +129,16 @@ function update ()
 {
   # Check if Ponce's git repo is being used
   local PONCEREPO=$(check_ponce_repo)
+  local BASEDIR=$(basename $CDIR)
   
   # Create local git directory if needed
   if [ ! -d "$CDIR" ]; then
     mkdir $CDIR
     cd $CDIR/../
-    rm -rf SBo
-    git clone $REPO SBo
+    rm -rf $BASEDIR
+    git clone $REPO $BASEDIR
     if ! $PONCEREPO; then
-      cd SBo
+      cd $BASEDIR
       checkout_git_branch $BRANCH
     fi
 
@@ -150,8 +151,8 @@ function update ()
       git pull
     else
       cd $CDIR/../
-      rm -rf SBo
-      git clone $REPO SBo 
+      rm -rf $BASEDIR
+      git clone $REPO $BASEDIR 
     fi
   fi
 }
@@ -161,7 +162,7 @@ function update ()
 function check_installed ()
 {
   local BUILD=$1
-  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$BUILD*_SBo")
+  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$BUILD*_$TAG")
   local INSTALLED=false
 
   # There can be multiple packages fitting the pattern, so loop through them
@@ -575,7 +576,7 @@ function check_upgrade ()
 function check_all_upgrades ()
 {
   # Get list of installed SlackBuilds
-  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_SBo" | sort)
+  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG" | sort)
 
   # Loop through installed packages and check for updates
   local PKG=""
@@ -685,7 +686,7 @@ function list_inv_reqs ()
   local BUILD=$1
 
   # Loop through list of installed packages
-  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_SBo")
+  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG")
   local PKG=""
   local NAME=""
   local BUILDPATH=""
@@ -838,7 +839,7 @@ function search_descriptions ()
 # Lists installed SlackBuilds and versions
 function list_installed ()
 {
-  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$BUILD*_SBo" | sort)
+  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$BUILD*_$TAG" | sort)
 
   # List number of installed packages
   set -- $PKGLIST
