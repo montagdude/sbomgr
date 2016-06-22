@@ -7,6 +7,6 @@ SlackBuild scripts are available at: https://github.com/montagdude/SlackBuilds/s
 
 sbomgr can also be used to manage non-SBo repositories, by taking these steps:
 * Create a new configuration file with variables reflecting the repository you want to use.
-* Run sbomgr as follows: CONF=/path/to/sbomgr.conf sbomgr COMMAND [OPTIONS]
+* Run sbomgr as follows: CONF=/path/to/sbomgr.conf sbomgr OPTIONS
 * The repository should be organized similarly to SBo; i.e., top-level/group/package structure.
 * SlackBuilds should follow SBo guidelines; i.e., must have .SlackBuild, .info, slack-desc, README, etc.
