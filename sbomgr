@@ -221,12 +221,12 @@ function user_choice ()
 function remove_slackbuild ()
 {
   local BUILD=$1
+  local FORCE=$2
   local INSTALLEDPKG=$(check_installed "$BUILD")
 
   # Return if package is not installed
   if [ "$INSTALLEDPKG" == "Not installed" ]; then
     echo "There is no installed SlackBuild called $BUILD."
-    exit 1
 
   # Otherwise remove the package
   else
@@ -234,11 +234,15 @@ function remove_slackbuild ()
     local MSG=""
     
     # Ask for confirmation before removing
-    MSG="Remove $BUILD?"
-    user_choice "$MSG" CHOICE
-    if [ "$CHOICE" == "y" ]; then
+    if [ "$FORCE" != "--force" ]; then
+      MSG="Remove $BUILD?"
+      user_choice "$MSG" CHOICE
+      if [ "$CHOICE" == "y" ]; then
+        removepkg "$INSTALLEDPKG"
+      fi 
+    else
       removepkg "$INSTALLEDPKG"
-    fi 
+    fi
   fi
 }
 
@@ -246,11 +250,17 @@ function remove_slackbuild ()
 # Removes multiple SlackBuilds
 function remove_multiple ()
 {
-  local BUILDS="$@"
-  local BUILD=""
+  # Determine if --force option has been selected
+  if [[ "$1" == "--force" || "$1" == "-f" ]]; then
+    local FORCE="--force"
+    local BUILDS="${@:2:$#}"
+  else
+    local FORCE=""
+    local BUILDS="$@"
+  fi
   for BUILD in $BUILDS
   do
-    remove_slackbuild "$BUILD"
+    remove_slackbuild "$BUILD" "$FORCE"
   done
 }
 
@@ -927,9 +937,10 @@ function print_usage ()
   echo "                                directory instead of downloading. Can"
   echo "                                only be used to install one at a time."
   echo ""
-  echo "       remove SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
+  echo "       remove [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
   echo "                              Optionally removes the specified"
-  echo "                              SlackBuilds."
+  echo "                              SlackBuilds. Use --force or -f to remove"
+  echo "                              without prompting."
   echo ""
   echo "       check-upgrade SLACKBUILD"
   echo "                              Checks the specified SlackBuild for"
