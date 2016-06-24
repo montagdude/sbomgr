@@ -21,6 +21,11 @@
 CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 . $CONF
 
+#
+# sbomgr version
+#
+VERSION=0.2.3
+
 ################################################################################
 # Removes quotes around string
 function remove_quotes ()
@@ -915,6 +920,13 @@ function browse_group ()
 }  
 
 ################################################################################
+# Prints sbomgr version
+function print_version ()
+{
+  echo "sbomgr version $VERSION"
+}
+
+################################################################################
 # Provides info on program usage
 function print_usage ()
 {
@@ -973,7 +985,9 @@ function print_usage ()
   echo ""
   echo "       browse-group GROUP     Lists SlackBuilds in specified GROUP."
   echo ""
-  echo "       --help                 Shows this usage information."
+  echo "       --version, -v          Prints sbomgr version."
+  echo ""
+  echo "       --help, -h             Shows this usage information."
   echo ""
 }
 
@@ -1087,8 +1101,12 @@ elif [ "$1" == "browse-group" ]; then
     browse_group $2
   fi
 
+# --version
+elif [[ "$1" == "--version" || "$1" == "-v" ]]; then
+  print_version
+
 # --help
-elif [ "$1" == "--help" ]; then
+elif [[ "$1" == "--help" || "$1" == "-h" ]]; then
   print_usage
 
 # Unrecognized option
