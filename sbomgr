@@ -399,12 +399,10 @@ function install_slackbuild ()
       MSG="$BUILD is already installed but out of date. Reinstall?"
     fi
 
-    # Remove package or return
+    # Return if user chooses to
     if [ "$FORCE" != "--force" ]; then
       user_choice "$MSG" CHOICE
-      if [ "$CHOICE" == "y" ]; then
-        removepkg $INSTALLEDPKG
-      else
+      if [ "$CHOICE" != "y" ]; then
         return
       fi
     fi
@@ -531,7 +529,7 @@ function install_slackbuild ()
   fi
 
   # Install compiled package
-  installpkg $PKG
+  upgradepkg --reinstall --install-new $PKG
 
   # Remove temporary files and source code
   rm $PKG
@@ -549,7 +547,7 @@ function install_slackbuild ()
 }
 
 ################################################################################
-# Installs or reinstalls multiple SlackBuilds
+# Installs, reinstalls, or upgrades multiple SlackBuilds
 function install_multiple ()
 {
   # Determine if last argument is source location
@@ -569,11 +567,11 @@ function install_multiple ()
     local BUILDS="$@"
   fi 
 
-  # Determine if last argument is source location
+  # Install SlackBuilds
   local BUILD=""
   for BUILD in $BUILDS
   do
-    # Skip sources= line
+    # sources= line is not a SlackBuild (obviously), so skip it
     if [ "${BUILD%=*}" != "sources" ]; then
       install_slackbuild "$FORCE" "$BUILD" "$SOURCEOPT"
     fi
@@ -975,10 +973,10 @@ function print_usage ()
   echo "                              Installs or reinstalls the specified"
   echo "                                  SlackBuilds."
   echo ""
-  echo "       install [--force, f] SLACKBUILD sources=DIRECTORY"
-  echo "                              Copies source code from specified"
-  echo "                                directory instead of downloading. Can"
-  echo "                                only be used to install one at a time."
+  echo "       install ... sources=DIRECTORY"
+  echo "                              Specify sources=DIRECTORY as last argument"
+  echo "                                to copy source tarballs from this"
+  echo "                                directory instead of downloading."
   echo ""
   echo "       remove [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
   echo "                              Optionally removes the specified"
