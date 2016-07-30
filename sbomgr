@@ -263,6 +263,7 @@ function remove_multiple ()
     local FORCE=""
     local BUILDS="$@"
   fi
+  local BUILD=""
   for BUILD in $BUILDS
   do
     remove_slackbuild "$BUILD" "$FORCE"
@@ -351,10 +352,18 @@ function remove_sources ()
 # Installs or reinstalls SlackBuild
 function install_slackbuild ()
 {
-  local BUILD=$1
+  # Get BUILD and check for --force option
+  if [ "$1" == "--force" ]; then
+    local FORCE="--force"
+    local BUILD=$2
+    local SOURCEOPT=$3
+  else
+    local FORCE=""
+    local BUILD=$1
+    local SOURCEOPT=$2
+  fi
 
   # Get directory for source files if specified by user
-  local SOURCEOPT=$2
   local SOURCEDIR=${SOURCEOPT#*=}
   local SOURCESPEC=${SOURCEOPT%=*}
 
@@ -391,11 +400,13 @@ function install_slackbuild ()
     fi
 
     # Remove package or return
-    user_choice "$MSG" CHOICE
-    if [ "$CHOICE" == "y" ]; then
-      removepkg $INSTALLEDPKG
-    else
-      return
+    if [ "$FORCE" != "--force" ]; then
+      user_choice "$MSG" CHOICE
+      if [ "$CHOICE" == "y" ]; then
+        removepkg $INSTALLEDPKG
+      else
+        return
+      fi
     fi
   fi
 
@@ -541,11 +552,31 @@ function install_slackbuild ()
 # Installs or reinstalls multiple SlackBuilds
 function install_multiple ()
 {
-  local BUILDS="$@"
+  # Determine if last argument is source location
+  local LAST="${@: -1}"
+  if [ "${LAST%=*}" == "sources" ]; then
+    local SOURCEOPT="$LAST"
+  else
+    local SOURCEOPT=""
+  fi
+
+  # Determine if --force option has been selected
+  if [[ "$1" == "--force" || "$1" == "-f" ]]; then
+    local FORCE="--force"
+    local BUILDS="${@:2:$#}"
+  else
+    local FORCE=""
+    local BUILDS="$@"
+  fi 
+
+  # Determine if last argument is source location
   local BUILD=""
   for BUILD in $BUILDS
   do
-    install_slackbuild "$BUILD"
+    # Skip sources= line
+    if [ "${BUILD%=*}" != "sources" ]; then
+      install_slackbuild "$FORCE" "$BUILD" "$SOURCEOPT"
+    fi
   done
 }
 
@@ -940,11 +971,11 @@ function print_usage ()
   echo "       update                 Syncs git repo with local copy. Use"
   echo "                                before updating."
   echo ""
-  echo "       install SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
+  echo "       install [--force, -f ] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
   echo "                              Installs or reinstalls the specified"
   echo "                                  SlackBuilds."
   echo ""
-  echo "       install SLACKBUILD sources=DIRECTORY"
+  echo "       install [--force, f] SLACKBUILD sources=DIRECTORY"
   echo "                              Copies source code from specified"
   echo "                                directory instead of downloading. Can"
   echo "                                only be used to install one at a time."
@@ -1002,21 +1033,13 @@ if [ $# -lt 1 ]; then
 elif [ "$1" == "update" ]; then
   update 
 
-# install SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...] and
-# install SLACKBUILD sources={DIRECTORY}
+# install [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...] and
+# install [--force, -f] SLACKBUILD sources={DIRECTORY}
 elif [ "$1" == "install" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify SlackBuild with install option."
   elif [ $# -eq 2 ]; then
     install_slackbuild $2
-  elif [ $# -eq 3 ]; then
-    if [ "${3%=*}" == "sources" ]; then
-      # Source directory is specified for single SlackBuild
-      install_slackbuild $2 $3    
-    else
-      # Install multiple SlackBuilds (strip off the first argument)
-      install_multiple "${@:2:$#}"
-    fi
   else
     # Install multiple SlackBuilds (strip off the first argument)
     install_multiple "${@:2:$#}" 
