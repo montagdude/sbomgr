@@ -243,10 +243,10 @@ function remove_slackbuild ()
       MSG="Remove $BUILD?"
       user_choice "$MSG" CHOICE
       if [ "$CHOICE" == "y" ]; then
-        removepkg "$INSTALLEDPKG"
+        removepkg $INSTALLEDPKG
       fi 
     else
-      removepkg "$INSTALLEDPKG"
+      removepkg $INSTALLEDPKG
     fi
   fi
 }
@@ -266,7 +266,7 @@ function remove_multiple ()
   local BUILD=""
   for BUILD in $BUILDS
   do
-    remove_slackbuild "$BUILD" "$FORCE"
+    remove_slackbuild $BUILD $FORCE
   done
 }
 
@@ -343,7 +343,7 @@ function remove_sources ()
   do
     SOURCE=$(basename "$SOURCE")
     if [ -f "$SOURCE" ]; then
-      rm "$SOURCE"
+      rm $SOURCE
     fi
   done
 }
@@ -469,7 +469,7 @@ function install_slackbuild ()
         echo "Error: source file $SOURCE not present in $SOURCEDIR."
         exit 1
       else
-        cp "$SOURCEDIR/$SOURCE" .
+        cp $SOURCEDIR/$SOURCE .
       fi
 
     # Download and check for error ($? is the return value)
@@ -504,7 +504,7 @@ function install_slackbuild ()
 
     # Remove source code
     if [ "$SOURCEDIR" == "" ]; then
-      remove_sources "$SOURCES"
+      remove_sources $SOURCES
       exit 1
     fi
   fi
@@ -520,7 +520,7 @@ function install_slackbuild ()
 
     # Remove source code
     if [ "$SOURCEDIR" == "" ]; then
-      remove_sources "$SOURCES"
+      remove_sources $SOURCES
   
       # Discard changes to repository and exit
       git checkout $BUILD.SlackBuild
@@ -534,7 +534,7 @@ function install_slackbuild ()
   # Remove temporary files and source code
   rm $PKG
   if [ "$SOURCEDIR" == "" ]; then
-    remove_sources "$SOURCES"
+    remove_sources $SOURCES
   fi
 
   # Discard changes to repository (just changed permission of Slackbuild script)
@@ -573,7 +573,7 @@ function install_multiple ()
   do
     # sources= line is not a SlackBuild (obviously), so skip it
     if [ "${BUILD%=*}" != "sources" ]; then
-      install_slackbuild "$FORCE" "$BUILD" "$SOURCEOPT"
+      install_slackbuild $FORCE $BUILD $SOURCEOPT
     fi
   done
 }
