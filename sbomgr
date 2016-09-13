@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.2.6
+VERSION=0.3.0
 
 ################################################################################
 # Removes quotes around string
@@ -285,7 +285,7 @@ function sources_from_info ()
   local ARCH=$(uname -m)
 
   # Read variables from .info file
-  source $INFILE
+  . $INFILE
 
   # First try to use DOWNLOAD_x86_64 link for 64-bit
   if [ "$ARCH" == "x86_64" ]; then
@@ -316,7 +316,7 @@ function md5sums_from_info ()
   local ARCH=$(uname -m)
 
   # Read variables from .info file
-  source $INFILE
+  . $INFILE
 
   # First try to use MD5SUM_x86_64 link for 64-bit
   if [ "$ARCH" == "x86_64" ]; then
@@ -704,7 +704,7 @@ function list_reqs ()
 
   # Read dependencies from *.info file
   cd $BUILDPATH
-  source "$BUILD".info
+  . "$BUILD".info
   if [ "$REQUIRES" != "" ]; then
     echo "Requirements of $BUILD:"
     local DEP=""
@@ -749,7 +749,7 @@ function list_inv_reqs ()
     cd $BUILDPATH
 
     # Read requirements from *.info file
-    source "$NAME".info
+    . "$NAME".info
     
     # Loop through and see if specified SlackBuild is mentioned
     if [ "$REQUIRES" != "" ]; then
@@ -904,6 +904,85 @@ function list_installed ()
 }
 
 ################################################################################
+# Lists installed SlackBuilds that are not required by any other installed
+# SlackBuild
+function list_orphans ()
+{
+  local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG" | sort)
+
+  echo ""
+  echo "Searching ..."
+
+  # Could use list_inv_reqs, but it will keep searching for all SlackBuilds that
+  # require a given other SlackBuild, thus wasting time. Will duplicate the
+  # functionality here instead.
+  local CHECKPKG=""
+  local CHECKNAME=""
+  local PKG=""
+  local NAME=""
+  local BUILDPATH=""
+  local REQ=""
+  local ISREQ=0
+  local ORPHANS=""
+  for CHECKPKG in $PKGLIST
+  do
+    CHECKPKG=$(basename "$CHECKPKG")
+    CHECKNAME=$(get_installed_name "$CHECKPKG")
+    ISREQ=0
+    for PKG in $PKGLIST
+    do
+      # Go to top of git tree
+      cd $CDIR
+
+      # Go to directory of requested SlackBuild
+      PKG=$(basename "$PKG")
+      NAME=$(get_installed_name "$PKG")
+      BUILDPATH=$(find . -maxdepth 2 -mindepth 2 -name "$NAME")
+      cd $BUILDPATH
+
+      # Read requirements from *.info file
+      . "$NAME".info
+
+      # Loop through and see if specified SlackBuild is mentioned
+      if [ "$REQUIRES" != "" ]; then
+        for REQ in $REQUIRES
+        do
+          if [ "$REQ" == "$CHECKNAME" ]; then
+            let "ISREQ+=1"
+            break
+          fi
+        done 
+      fi
+      if [ $ISREQ -gt 0 ]; then
+        break
+      fi
+    done
+
+    # Store SlackBuild in orphan list if no package requires it
+    if [ $ISREQ -eq 0 ]; then
+      ORPHANS="$ORPHANS $CHECKPKG"
+    fi
+  done
+
+  set -- $ORPHANS
+  if [ $# -eq 0 ]; then
+    echo "No orphans found."
+    return
+  else
+    echo "The following are not required by any installed SlackBuilds:"
+  fi
+
+  # Loop through orphans and list name-version
+  echo "-----------------------------------------------------------------------"
+  local ORHPAN=""
+  for ORPHAN in $ORPHANS
+  do
+    echo "$ORPHAN"
+  done
+  echo ""
+}
+
+################################################################################
 # Lists groups in git tree
 function list_groups ()
 {
@@ -1010,6 +1089,10 @@ function print_usage ()
   echo ""
   echo "       list-installed         Lists installed SlackBuilds and versions."
   echo ""
+  echo "       list-orphans           Lists installed SlackBuilds that are not"
+  echo "                                required by any other installed"
+  echo "                                SlackBuild."
+  echo ""
   echo "       list-groups            Lists groups in git tree."
   echo ""
   echo "       browse-group GROUP     Lists SlackBuilds in specified GROUP."
@@ -1109,6 +1192,10 @@ elif [ "$1" == "info" ]; then
 # list-installed
 elif [ "$1" == "list-installed" ]; then
   list_installed
+
+# list-orphans
+elif [ "$1" == "list-orphans" ]; then
+  list_orphans
 
 # list-groups
 elif [ "$1" == "list-groups" ]; then
