@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.3.0
+VERSION=0.3.1
 
 ################################################################################
 # Removes quotes around string
@@ -510,6 +510,7 @@ function install_slackbuild ()
   fi
 
   # Execute install script
+  local PERM=$(stat -c '%a %n' $BUILD.SlackBuild)
   chmod +x $BUILD.SlackBuild
   ./$BUILD.SlackBuild
 
@@ -522,8 +523,8 @@ function install_slackbuild ()
     if [ "$SOURCEDIR" == "" ]; then
       remove_sources $SOURCES
   
-      # Discard changes to repository and exit
-      git checkout $BUILD.SlackBuild
+      # Restore permissions of SlackBuild script and exit
+      chmod $PERM $BUILD.SlackBuild
       exit 1
     fi
   fi
@@ -537,8 +538,8 @@ function install_slackbuild ()
     remove_sources $SOURCES
   fi
 
-  # Discard changes to repository (just changed permission of Slackbuild script)
-  git checkout $BUILD.SlackBuild
+  # Restore original permissions of SlackBuild script
+  chmod $PERM $BUILD.SlackBuild
 
   # Notify of any special Slackware instructions
   if [[ -f 'README.SLACKWARE' || -f 'README.Slackware' ]]; then
