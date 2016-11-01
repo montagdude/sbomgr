@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.3.1
+VERSION=0.4.0
 
 ################################################################################
 # Removes quotes around string
@@ -686,42 +686,67 @@ function check_all_upgrades ()
 }
 
 ################################################################################
-# Lists dependencies of specified SlackBuild by scanning .info file
-function list_reqs ()
+# Lists recursive dependencies of specified SlackBuild
+function list_recursive_reqs ()
 {
   local BUILD=$1
 
-  echo ""
-  echo "Note: only checks status of level 0 dependencies; dependencies of "
-  echo "dependencies are not checked."
-  echo ""
-
   # Get the directory for the requested SlackBuild
   local BUILDPATH=$(find "$CDIR" -maxdepth 2 -mindepth 2 -name "$BUILD")
-  if [ "$BUILDPATH" == "" ]; then
+  if [ -z "$BUILDPATH" ]; then
     echo "There is no SlackBuild named $BUILD."
     return
   fi
 
-  # Read dependencies from *.info file
-  cd $BUILDPATH
-  . "$BUILD".info
-  if [ "$REQUIRES" != "" ]; then
-    echo "Requirements of $BUILD:"
+  # Build list of requirements by scanning .info files
+  . "$BUILDPATH"/"$BUILD".info
+  if [ -n "$REQUIRES" ]; then
     local DEP=""
     local STATUS=""
+    local REQ=""
     for DEP in $REQUIRES
     do
-      if [ "$(check_installed $DEP)" != "Not installed" ]; then
-        STATUS="installed"
+      if [ "$DEP" == "%README%" ]; then
+        echo "Note: see README for $BUILD"
       else
-        STATUS="not installed"
+        REQLIST=$(echo "$REQLIST" | sed "s@$DEP @@")  # Remove earlier duplicate
+        REQLIST="$REQLIST $DEP"
+        list_recursive_reqs $DEP
       fi
-      echo "$DEP  [$STATUS]"
     done
-  else
-    echo "No required packages for $BUILD."
   fi
+}
+
+################################################################################
+# Reverse order of REQLIST so that lower dependencies are listed first
+function reverse_reqlist ()
+{
+  local REQARR=($REQLIST)
+  local I
+
+  REQLIST=""
+  for ((I = ${#REQARR[@]} - 1; I >= 0; I--))
+  do
+    REQLIST="$REQLIST ${REQARR[I]}"
+  done
+}
+
+################################################################################
+# Prints list of requirements and installation status
+function print_reqlist ()
+{
+  local REQ=""
+  local STATUS=""
+
+  for REQ in $REQLIST
+  do
+    if [ "$(check_installed $REQ)" != "Not installed" ]; then
+      STATUS="installed"
+    else
+      STATUS="not installed"
+    fi
+    echo "$REQ [$STATUS]"
+  done
 }
 
 ################################################################################
@@ -1115,9 +1140,22 @@ if [ $# -lt 1 ]; then
 elif [ "$1" == "update" ]; then
   update 
 
-# install [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...] and
-# install [--force, -f] SLACKBUILD sources={DIRECTORY}
+# install [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]
+#FIXME make this work with multiple SlackBuilds and sources= line
+#FIXME options should be handled more gracefully
 elif [ "$1" == "install" ]; then
+  if [ $# -eq 1 ]; then
+    print_usage "must specify SlackBuild with install option."
+  elif [ $# -eq 2 ]; then
+    REQLIST=""
+    list_recursive_reqs $2
+    reverse_reqlist
+    install_multiple "$REQLIST $2"
+  fi
+
+# install-no-deps [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...] and
+# install-no-deps [--force, -f] SLACKBUILD sources={DIRECTORY}
+elif [ "$1" == "install-no-deps" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify SlackBuild with install option."
   elif [ $# -eq 2 ]; then
@@ -1155,7 +1193,10 @@ elif [ "$1" == "requires" ]; then
   if [ $# -lt 2 ]; then
     print_usage "must specify a SlackBuild with requires option."
   else
-    list_reqs $2
+    REQLIST=""
+    list_recursive_reqs $2
+    reverse_reqlist
+    print_reqlist
   fi
 
 # requirement-of SLACKBUILD
