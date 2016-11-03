@@ -641,7 +641,7 @@ function remove_multiple ()
 function list_upgrades ()
 {
   local PKG BUILD INSTALLEDVERSION CURRENTVERSION UPDATELIST
-  local INSTALLEDVERSIONLIST CURRENTVERSIONLIST
+  local INSTALLEDVERSIONLIST CURRENTVERSIONLIST LEN
 
   # Get list of installed SlackBuilds
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG" | sort)
@@ -658,9 +658,12 @@ function list_upgrades ()
 
     # Get current version
     CURRENTVERSION=$(get_current_version "$BUILD")
+    LEN=${#CURRENTVERSION}
 
     # Compare versions and tally up-to-date and out-of-date
-    if [ "$INSTALLEDVERSION" != "$CURRENTVERSION" ]; then
+    # Some SlackBuilds append to version number during install (e.g. kernel
+    #   modules), so ignore that part when comparing.
+    if [ "${INSTALLEDVERSION:0:$LEN}" != "$CURRENTVERSION" ]; then
       UPDATELIST["$UPDATECOUNT"]="$BUILD"
       INSTALLEDVERSIONLIST["$UPDATECOUNT"]="$INSTALLEDVERSION"
       CURRENTVERSIONLIST["$UPDATECOUNT"]="$CURRENTVERSION"
@@ -1163,6 +1166,12 @@ elif [ "$1" == "remove" ]; then
 # list-upgrades
 elif [ "$1" == "list-upgrades" ]; then
   list_upgrades
+
+# upgrade-all
+elif [ "$1" == "upgrade-all"];
+  if [ $# -gt 1 ]; then
+    parse_install_opts ${@:2:$#}
+  upgrade_all
 
 # requires
 elif [ "$1" == "requires" ]; then
