@@ -169,12 +169,11 @@ function check_installed ()
   local BUILD=$1
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$BUILD*_$TAG")
   local INSTALLED=false
+  local PKG BUILDNAME
 
   # There can be multiple packages fitting the pattern, so loop through them
   # and check against requested
   if [ "$PKGLIST" != "" ]; then
-    local PKG=""
-    local BUILDNAME=""
     for PKG in $PKGLIST
     do
       PKG=$(basename "$PKG")
@@ -199,8 +198,7 @@ function user_choice ()
 {
   local __MSG=$1
   local __CHOICE=$2
-  local TEMPCHOICE=""
-  local VALIDCHOICE=false
+  local TEMPCHOICE VALIDCHOICE
 
   while ! $VALIDCHOICE
   do
@@ -286,8 +284,8 @@ function sources_from_info ()
     local FORCE32="noforce-32-bit"
   fi
   local FORCE32=$2
-  local SOURCES=""
   local ARCH=$(uname -m)
+  local SOURCES
 
   # Read variables from .info file
   . $INFILE
@@ -316,9 +314,8 @@ function md5sums_from_info ()
   else
     local FORCE32="noforce-32-bit"
   fi
-  local SOURCES=""
-  local MD5SUMS=""
   local ARCH=$(uname -m)
+  local SOURCES MD5SUMS
 
   # Read variables from .info file
   . $INFILE
@@ -343,7 +340,7 @@ function md5sums_from_info ()
 function remove_sources ()
 {
   local SOURCES="$@"
-  local SOURCE=""
+  local SOURCE
   for SOURCE in $SOURCES
   do
     SOURCE=$(basename "$SOURCE")
@@ -358,6 +355,7 @@ function remove_sources ()
 function install_slackbuild ()
 {
   local BUILD=$1
+  local MSG CHOICE MD5ARRAY ITEM CHKDNLD MD5CHK
 
   # Get SlackBuild path
   cd $CDIR
@@ -374,8 +372,6 @@ function install_slackbuild ()
   if [ "$INSTALLEDPKG" != "Not installed" ]; then
     local INSTALLEDVERSION=$(get_installed_version "$INSTALLEDPKG")
     local CURRENTVERSION=$(get_current_version "$BUILD")
-    local MSG=""
-    local CHOICE=""
 
     # Current version already installed - ask for reinstallation
     if [ "$INSTALLEDVERSION" == "$CURRENTVERSION" ]; then
@@ -416,8 +412,7 @@ function install_slackbuild ()
   local FORCE32="no-force-32-bit"
   local ARCH=$(uname -m)
   if [[ "$ARCH" == "x86_64" && "$SOURCES" == "UNSUPPORTED" ]]; then
-    local CHOICE=""
-    local MSG="$BUILD is unsupported on x86_64, but it may work with mutlilib.\nTry installing 32-bit version?"
+    MSG="$BUILD is unsupported on x86_64, but it may work with mutlilib.\nTry installing 32-bit version?"
     user_choice "$MSG" CHOICE
     if [ "$CHOICE" == "y" ]; then
       FORCE32="force-32-bit"
@@ -429,8 +424,6 @@ function install_slackbuild ()
 
   # Get MD5sums for source downloads and put them into an array
   local MD5SUMS=$(md5sums_from_info "$BUILD".info $FORCE32)
-  local MD5ARRAY=""
-  local ITEM=""
   local COUNT=0
   for ITEM in $MD5SUMS
   do
@@ -442,8 +435,6 @@ function install_slackbuild ()
   remove_sources "$SOURCES"
 
   # Download and check MD5SUMs
-  local CHKDNLD=""
-  local MD5CHK=""
   local SOURCERR=0
   local MD5ERR=0
   COUNT=0
@@ -686,21 +677,15 @@ function check_upgrade ()
 # Checks all installed SlackBuilds for upgrades
 function check_all_upgrades ()
 {
+  local PKG BUILD INSTALLEDVERSION CURRENTVERSION UPDATELIST UPTODATELIST 
+  local INSTALLEDVERSIONLIST1 INSTALLEDVERSIONLIST2 CURRENTVERSIONLIST
+
   # Get list of installed SlackBuilds
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG" | sort)
 
   # Loop through installed packages and check for updates
-  local PKG=""
-  local BUILD=""
-  local INSTALLEDVERSION=""
-  local CURRENTVERSION=""
-  local UPDATELIST=""
-  local UPTODATELIST=""
   local UPDATECOUNT=0
   local UPTODATECOUNT=0
-  local INSTALLEDVERSIONLIST1=""
-  local INSTALLEDVERSIONLIST2=""
-  local CURRENTVERSIONLIST=""
   for PKG in $PKGLIST
   do
     PKG=$(basename "$PKG")
@@ -756,7 +741,7 @@ function check_all_upgrades ()
 function get_recursive_reqlist ()
 {
   local BUILD=$1
-  local REQARR I
+  local DEP REQARR I
 
   # Get the directory for the requested SlackBuild
   local BUILDPATH=$(find "$CDIR" -maxdepth 2 -mindepth 2 -name "$BUILD")
@@ -768,9 +753,6 @@ function get_recursive_reqlist ()
   # Build list of requirements by scanning .info files
   . "$BUILDPATH"/"$BUILD".info
   if [ -n "$REQUIRES" ]; then
-    local DEP=""
-    local STATUS=""
-    local REQ=""
     for DEP in $REQUIRES
     do
       if [ "$DEP" == "%README%" ]; then
@@ -796,8 +778,7 @@ function get_recursive_reqlist ()
 # Prints list of requirements and installation status
 function print_reqlist ()
 {
-  local REQ=""
-  local STATUS=""
+  local REQ STATUS
 
   for REQ in $REQLIST
   do
@@ -815,15 +796,11 @@ function print_reqlist ()
 function list_inv_reqs ()
 {
   local BUILD=$1
+  local PKG NAME BUILDPATH INVREQLIST REQ
 
   # Loop through list of installed packages
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG")
-  local PKG=""
-  local NAME=""
-  local BUILDPATH=""
-  local INVREQLIST=""
   local INVREQCOUNT=0
-  local REQ=""
   for PKG in $PKGLIST
   do
     # Go to top of git tree
@@ -910,6 +887,7 @@ function show_info ()
 function search ()
 {
   local PATTERN=$1
+  local BUILD STATUS
 
   # Go to the top of the git tree
   cd $CDIR
@@ -921,8 +899,6 @@ function search ()
     echo "There is no SlackBuild matching the pattern $PATTERN."
   else
     # Get GROUP/NAME/STATUS
-    local BUILD=""
-    local STATUS=""
     for BUILD in $BUILDS
     do
       BUILD=${BUILD#./*}
@@ -942,6 +918,8 @@ function search ()
 # Searches README files for given pattern
 function search_descriptions ()
 {
+  local BUILD
+
   # Make sure spaces in the search string are resolved
   local PATTERN="$*"
 
@@ -954,7 +932,6 @@ function search_descriptions ()
   # Display list of SlackBuilds
   if [ "$PTRNFILES" != "" ]; then
     echo "The following SlackBuilds have $PATTERN in the README file:"
-    local BUILD=""
     for BUILD in $PTRNFILES
     do
       BUILD=${BUILD#./*/*}  # Remove leading ./ and group
@@ -971,6 +948,7 @@ function search_descriptions ()
 function list_installed ()
 {
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "$BUILD*_$TAG" | sort)
+  local PKG
 
   # List number of installed packages
   set -- $PKGLIST
@@ -982,7 +960,6 @@ function list_installed ()
 
   # Loop through installed packages and list name-version
   echo "-----------------------------------------------------------------------"
-  local PKG=""
   for PKG in $PKGLIST
   do
     echo $(basename "$PKG")
@@ -996,6 +973,7 @@ function list_installed ()
 function list_orphans ()
 {
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG" | sort)
+  local CHECKPKG CHECKNAME PKG NAME BUILDPATH REQ ORPHANS ORPHAN
 
   echo ""
   echo "Searching ..."
@@ -1003,14 +981,8 @@ function list_orphans ()
   # Could use list_inv_reqs, but it will keep searching for all SlackBuilds that
   # require a given other SlackBuild, thus wasting time. Will duplicate the
   # functionality here instead.
-  local CHECKPKG=""
-  local CHECKNAME=""
-  local PKG=""
-  local NAME=""
-  local BUILDPATH=""
-  local REQ=""
   local ISREQ=0
-  local ORPHANS=""
+  ORPHANS=""
   for CHECKPKG in $PKGLIST
   do
     CHECKPKG=$(basename "$CHECKPKG")
@@ -1061,7 +1033,6 @@ function list_orphans ()
 
   # Loop through orphans and list name-version
   echo "-----------------------------------------------------------------------"
-  local ORHPAN=""
   for ORPHAN in $ORPHANS
   do
     echo "$ORPHAN"
@@ -1073,12 +1044,13 @@ function list_orphans ()
 # Lists groups in git tree
 function list_groups ()
 {
+  local GROUP
+
   # Go to top-level git tree
   cd $CDIR
 
   # Print list of groups
   local GROUPLIST=$(find . -maxdepth 1 -type d | sort)
-  local GROUP=""
   for GROUP in $GROUPLIST
   do
     if [[ "$GROUP" != "." && "$GROUP" != "./.git" ]]; then
@@ -1092,6 +1064,7 @@ function list_groups ()
 function browse_group ()
 {
   local GROUP=$1
+  local PKG
 
   # Go to top-level git tree
   cd $CDIR
@@ -1105,7 +1078,6 @@ function browse_group ()
   # List packages in GROUP
   cd $GROUP
   local PKGLIST=$(find . -maxdepth 1 -type d | sort)
-  local PKG=""
   for PKG in $PKGLIST
   do
     if [ "$PKG" != "." ]; then
