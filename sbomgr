@@ -1114,8 +1114,7 @@ function print_usage ()
   echo "  Installs, reinstalls, or upgrades SlackBuilds listed on the command"
   echo "  line after the install command. By default, 'sbomgr install' resolves"
   echo "  dependencies by scanning the .info files in the repository and"
-  echo "  installs them before the requested SlackBuilds."
-  echo "install options:"
+  echo "  installs them before the requested SlackBuilds. Options:"
   echo "  --force, -f: for SlackBuilds that are already installed, upgrades or"
   echo "               reinstalls them without asking for confirmation."
   echo "  --no-deps, -n: installs only the listed SlackBuilds without resolving"
@@ -1125,8 +1124,7 @@ function print_usage ()
   echo
   echo "remove"
   echo "  Removes the SlackBuilds listed on the command line after the remove"
-  echo "  command."
-  echo "remove options:"
+  echo "  command. Options:"
   echo "  --force, -f: removes without asking for confirmation first."
   echo
   echo "check-upgrade"
@@ -1209,7 +1207,7 @@ elif [ "$1" == "remove" ]; then
     remove_multiple $(get_buildlist ${@:2:$#})
   fi 
 
-# check-upgrade SLACKBUILD
+# check-upgrade
 elif [ "$1" == "check-upgrade" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify a SlackBuild with check-upgrade option."
@@ -1221,7 +1219,7 @@ elif [ "$1" == "check-upgrade" ]; then
 elif [ "$1" == "check-all-upgrades" ]; then
   check_all_upgrades
 
-# requires SLACKBUILD
+# requires
 elif [ "$1" == "requires" ]; then
   if [ $# -lt 2 ]; then
     print_usage "must specify a SlackBuild with requires option."
@@ -1231,7 +1229,7 @@ elif [ "$1" == "requires" ]; then
     print_reqlist
   fi
 
-# requirement-of SLACKBUILD
+# requirement-of
 elif [ "$1" == "requirement-of" ]; then
   if [ $# -lt 2 ]; then
     print_usage "must specify a SlackBuild with requirement-of option."
@@ -1239,7 +1237,7 @@ elif [ "$1" == "requirement-of" ]; then
     list_inv_reqs $2
   fi
 
-# search PATTERN
+# search
 elif [ "$1" == "search" ]; then
   if [ $# -lt 2 ]; then
     print_usage "must specify PATTERN with search option."
@@ -1247,7 +1245,7 @@ elif [ "$1" == "search" ]; then
     search $2
   fi
 
-# search-descriptions PATTERN
+# search-descriptions
 elif [ "$1" == "search-descriptions" ]; then
   if [ $# -lt 2 ]; then
     print_usage "must specify PATTERN with search-descriptions option."
@@ -1255,7 +1253,7 @@ elif [ "$1" == "search-descriptions" ]; then
     search_descriptions $2
   fi
 
-# info SLACKBUILD
+# info
 elif [ "$1" == "info" ]; then
   if [ $# -lt 2 ]; then
     print_usage "must specify a SlackBuild with info option."
@@ -1275,7 +1273,7 @@ elif [ "$1" == "list-orphans" ]; then
 elif [ "$1" == "list-groups" ]; then
   list_groups
 
-# browse-group GROUP
+# browse-group
 elif [ "$1" == "browse-group" ]; then
   if [ $# -lt 2 ]; then
     print_usage "must specify a SlackBuild with browse-group option."
