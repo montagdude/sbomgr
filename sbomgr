@@ -271,6 +271,61 @@ function remove_multiple ()
 }
 
 ################################################################################
+# Gets list of SlackBuilds specified on the command line
+function get_buildlist
+{
+  local ARG BUILDLIST
+  BUILDLIST=""
+
+  for ARG in $@
+  do
+    if [ "${ARG:0:1}" == "-" ]; then
+      continue
+    elif [ "${ARG%=*}" == "sources" ]; then
+      continue
+    else
+      BUILDLIST="$BUILDLIST $ARG"
+    fi
+  done
+
+  echo $BUILDLIST
+}
+
+################################################################################
+# Parses command-line options for install
+function parse_install_opts ()
+{
+  # Defaults
+  FORCE=0
+  NODEPS=0
+  SOURCEOPT=0
+  SOURCEDIR=""
+
+  local ARG
+  for ARG in $@
+  do
+    if [ "${ARG:0:1}" == "-" ]; then
+      case $ARG in
+      "--force" | "-f")
+          FORCE=1
+          ;;
+      "--no-deps" | "-n")
+          NODEPS=1
+          ;;
+      *)
+          echo "Unrecognized install option $ARG."
+          exit 1
+          ;;
+      esac
+    elif [ "${ARG%=*}" == "sources" ]; then
+      SOURCEOPT=1
+      SOURCEDIR=${ARG#*=}
+    fi
+  done
+}
+
+
+################################################################################
 # Extracts URLs of source files to download
 function sources_from_info ()
 {
@@ -352,25 +407,7 @@ function remove_sources ()
 # Installs or reinstalls SlackBuild
 function install_slackbuild ()
 {
-  # Get BUILD and check for --force option
-  if [ "$1" == "--force" ]; then
-    local FORCE="--force"
-    local BUILD=$2
-    local SOURCEOPT=$3
-  else
-    local FORCE=""
-    local BUILD=$1
-    local SOURCEOPT=$2
-  fi
-
-  # Get directory for source files if specified by user
-  local SOURCEDIR=${SOURCEOPT#*=}
-  local SOURCESPEC=${SOURCEOPT%=*}
-
-  if [[ "$SOURCEDIR" != "" && "$SOURCESPEC" != "sources" ]]; then
-    echo "Error: unrecognized command line option. Try sbomgr --help."
-    exit 1
-  fi
+  local BUILD=$1
 
   # Get SlackBuild path
   cd $CDIR
@@ -400,7 +437,7 @@ function install_slackbuild ()
     fi
 
     # Return if user chooses to
-    if [ "$FORCE" != "--force" ]; then
+    if [ $FORCE -eq 0 ]; then
       user_choice "$MSG" CHOICE
       if [ "$CHOICE" != "y" ]; then
         return
@@ -463,13 +500,15 @@ function install_slackbuild ()
   for SOURCE in $SOURCES
   do
     # Copy sources from specified directory
-    if [ "$SOURCEDIR" != "" ]; then
+    if [ $SOURCEOPT -eq 1 ]; then
       SOURCE=$(basename "$SOURCE")
-      if [ "$(find "$SOURCEDIR" -maxdepth 1 -name "$SOURCE")" == "" ]; then
+      if [ -z "$(find "$SOURCEDIR" -maxdepth 1 -name "$SOURCE")" ]; then
         echo "Error: source file $SOURCE not present in $SOURCEDIR."
         exit 1
       else
-        cp $SOURCEDIR/$SOURCE .
+        if [ "$(readlink -f $SOURCEDIR)" != "$CDIR" ]; then
+          cp $SOURCEDIR/$SOURCE .
+        fi
       fi
 
     # Download and check for error ($? is the return value)
@@ -503,7 +542,7 @@ function install_slackbuild ()
     fi
 
     # Remove source code
-    if [ "$SOURCEDIR" == "" ]; then
+    if [[ $SOURCEOPT -eq 0 || "$(readlink -f $SOURCEDIR)" != "$CDIR" ]]; then
       remove_sources $SOURCES
       exit 1
     fi
@@ -520,7 +559,7 @@ function install_slackbuild ()
     echo "Error: build failed."
 
     # Remove source code
-    if [ "$SOURCEDIR" == "" ]; then
+    if [[ $SOURCEOPT -eq 0 || "$(readlink -f $SOURCEDIR)" != "$CDIR" ]]; then
       remove_sources $SOURCES
   
       # Restore permissions of SlackBuild script and exit
@@ -534,7 +573,7 @@ function install_slackbuild ()
 
   # Remove temporary files and source code
   rm $PKG
-  if [ "$SOURCEDIR" == "" ]; then
+  if [[ $SOURCEOPT -eq 0 || "$(readlink -f $SOURCEDIR)" != "$CDIR" ]]; then
     remove_sources $SOURCES
   fi
 
@@ -548,34 +587,46 @@ function install_slackbuild ()
 }
 
 ################################################################################
-# Installs, reinstalls, or upgrades multiple SlackBuilds
+# Installs, reinstalls, or upgrades one or more SlackBuilds
 function install_multiple ()
 {
-  # Determine if last argument is source location
-  local LAST="${@: -1}"
-  if [ "${LAST%=*}" == "sources" ]; then
-    local SOURCEOPT="$LAST"
-  else
-    local SOURCEOPT=""
-  fi
+  local BUILD REQ MSG CHOICE
 
-  # Determine if --force option has been selected
-  if [[ "$1" == "--force" || "$1" == "-f" ]]; then
-    local FORCE="--force"
-    local BUILDS="${@:2:$#}"
-  else
-    local FORCE=""
-    local BUILDS="$@"
-  fi 
-
-  # Install SlackBuilds
-  local BUILD=""
-  for BUILD in $BUILDS
+  for BUILD in $@
   do
-    # sources= line is not a SlackBuild (obviously), so skip it
-    if [ "${BUILD%=*}" != "sources" ]; then
-      install_slackbuild $FORCE $BUILD $SOURCEOPT
+    # Get list of dependencies
+    if [ $NODEPS -eq 0 ]; then
+      echo "Searching for dependencies of $BUILD ..."
+      REQLIST=""
+      get_recursive_reqlist $BUILD
+      reverse_reqlist
+
+      # Ask for confirmation
+      if [ -n "$REQLIST" ]; then
+        echo "The following SlackBuilds will be installed:"
+        for REQ in $REQLIST
+        do
+          echo $REQ
+        done
+        echo $BUILD
+        MSG="Proceed with installation?"
+        user_choice "$MSG" CHOICE
+        if [ "$CHOICE" == "n" ]; then
+          echo
+          continue
+        fi 
+      fi
+
+      # Install dependencies
+      for REQ in $REQLIST
+      do
+        install_slackbuild $REQ
+      done
     fi
+
+    # Install requested SlackBuild
+    install_slackbuild $BUILD
+    echo
   done
 }
 
@@ -687,7 +738,7 @@ function check_all_upgrades ()
 
 ################################################################################
 # Lists recursive dependencies of specified SlackBuild
-function list_recursive_reqs ()
+function get_recursive_reqlist ()
 {
   local BUILD=$1
 
@@ -707,11 +758,11 @@ function list_recursive_reqs ()
     for DEP in $REQUIRES
     do
       if [ "$DEP" == "%README%" ]; then
-        echo "Note: see README for $BUILD"
+        echo "Note: see README for optional dependencies of $BUILD"
       else
         REQLIST=$(echo "$REQLIST" | sed "s@$DEP @@")  # Remove earlier duplicate
         REQLIST="$REQLIST $DEP"
-        list_recursive_reqs $DEP
+        get_recursive_reqlist $DEP
       fi
     done
   fi
@@ -1068,65 +1119,83 @@ function print_usage ()
   if [ $# -eq 1 ]; then
     echo "Error: $1"
   fi
-  echo "Usage: sbomgr OPTIONS"
-  echo ""
-  echo "OPTIONS"
-  echo "       update                 Syncs git repo with local copy. Use"
-  echo "                                before updating."
-  echo ""
-  echo "       install [--force, -f ] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
-  echo "                              Installs or reinstalls the specified"
-  echo "                                  SlackBuilds."
-  echo ""
-  echo "       install ... sources=DIRECTORY"
-  echo "                              Specify sources=DIRECTORY as last argument"
-  echo "                                to copy source tarballs from this"
-  echo "                                directory instead of downloading."
-  echo ""
-  echo "       remove [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]"
-  echo "                              Optionally removes the specified"
-  echo "                              SlackBuilds. Use --force or -f to remove"
-  echo "                              without prompting."
-  echo ""
-  echo "       check-upgrade SLACKBUILD"
-  echo "                              Checks the specified SlackBuild for"
-  echo "                                upgrades."
-  echo ""
-  echo "       check-all-upgrades     Checks all installed SlackBuilds for"
-  echo "                                upgrades."
-  echo ""
-  echo "       requires SLACKBUILD    Lists level 0 packages required by the"
-  echo "                                specified SlackBuild and installed"
-  echo "                                status."
-  echo ""
-  echo "       requirement-of SLACKBUILD"
-  echo "                              Lists installed SlackBuilds that depend"
-  echo "                                on the specified SlackBuild."
-  echo ""
-  echo "       search PATTERN         Searches for SlackBuilds matching PATTERN"
-  echo "                                in git tree. Shows installed status."
-  echo ""
-  echo "       search-descriptions PATTERN"
-  echo "                              Searches README files in git tree for"
-  echo "                                specified pattern."
-  echo ""
-  echo "       info SLACKBUILD        Displays info about the SlackBuild from"
-  echo "                                README and README.SLACKWARE."
-  echo ""
-  echo "       list-installed         Lists installed SlackBuilds and versions."
-  echo ""
-  echo "       list-orphans           Lists installed SlackBuilds that are not"
-  echo "                                required by any other installed"
-  echo "                                SlackBuild."
-  echo ""
-  echo "       list-groups            Lists groups in git tree."
-  echo ""
-  echo "       browse-group GROUP     Lists SlackBuilds in specified GROUP."
-  echo ""
-  echo "       --version, -v          Prints sbomgr version."
-  echo ""
-  echo "       --help, -h             Shows this usage information."
-  echo ""
+  echo "Usage: sbomgr COMMAND [OPTIONS] [SLACKBUILDS]"
+  echo
+  echo "COMMANDS:"
+  echo
+  echo "update"
+  echo "  Syncs git repo with local repo. This command should be run on first"
+  echo "  use and periodically afterwards. Be sure to set the correct git"
+  echo "  branch for your Slackware version in /etc/sbomgr/sbomgr.conf."
+  echo
+  echo "install"
+  echo "  Installs, reinstalls, or upgrades SlackBuilds listed on the command"
+  echo "  line after the install command. By default, 'sbomgr install' resolves"
+  echo "  dependencies by scanning the .info files in the repository and"
+  echo "  installs them before the requested SlackBuilds."
+  echo "install options:"
+  echo "  --force, -f: for SlackBuilds that are already installed, upgrades or"
+  echo "               reinstalls them without asking for confirmation."
+  echo "  --no-deps, -n: installs only the listed SlackBuilds without resolving"
+  echo "                 dependencies."
+  echo "  sources=DIRECTORY: looks for source files in the specified directory"
+  echo "                     instead of downloading them from the internet."
+  echo
+  echo "remove"
+  echo "  Removes the SlackBuilds listed on the command line after the remove"
+  echo "  command."
+  echo "remove options:"
+  echo "  --force, -f: removes without asking for confirmation first."
+  echo
+  echo "check-upgrade"
+  echo "  Checks whether the SlackBuild listed on the command line after the"
+  echo "  check-upgrade command can be upgraded."
+  echo
+  echo "check-all-upgrades"
+  echo "  Checks all installed SlackBuilds for upgrades and prints a summary."
+  echo
+  echo "requires"
+  echo "  Resolves and displays dependencies for a SlackBuild, listed on the" 
+  echo "  command line after the requires command, and shows installation"
+  echo "  status."
+  echo
+  echo "requirement-of"
+  echo "  Displays installed SlackBuilds that depend on the SlackBuild listed"
+  echo "  on the command line after the requirement-of command."
+  echo
+  echo "search"
+  echo "  Searches for SlackBuilds in the repository whose name includes the"
+  echo "  pattern listed on the command line after the search command."
+  echo
+  echo "search-descriptions"
+  echo "  Searches README files in the repository for the pattern listed on the"
+  echo "  command line after the search-descriptions command."
+  echo
+  echo "info"
+  echo "  Displays the contents of the README* files for the SlackBuild listed"
+  echo "  on the command line after the info command."
+  echo
+  echo "list-installed"
+  echo "  Lists installed SlackBuilds and versions."
+  echo
+  echo "list-orphans"
+  echo "  Displays installed SlackBuilds that are not required by any other"
+  echo "  installed SlackBuild. Note that this list may include SlackBuilds"
+  echo "  that were explicitly installed by the user."
+  echo
+  echo "list-groups"
+  echo "  Displays groups in the repository."
+  echo
+  echo "browse-group"
+  echo "  Displays SlackBuilds in the group specified on the command line after"
+  echo "  the browse-group command."
+  echo
+  echo "--version, v"
+  echo "  Prints sbomgr version."
+  echo
+  echo "--help, h"
+  echo "  Shows this usage information."
+  echo 
 }
 
 ################################################################################
@@ -1134,35 +1203,19 @@ function print_usage ()
 
 # Not enough command line arguments
 if [ $# -lt 1 ]; then
-  print_usage "must specify an option."
+  print_usage "must specify a command."
 
 # update
 elif [ "$1" == "update" ]; then
   update 
 
 # install [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]
-#FIXME make this work with multiple SlackBuilds and sources= line
-#FIXME options should be handled more gracefully
 elif [ "$1" == "install" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify SlackBuild with install option."
-  elif [ $# -eq 2 ]; then
-    REQLIST=""
-    list_recursive_reqs $2
-    reverse_reqlist
-    install_multiple "$REQLIST $2"
-  fi
-
-# install-no-deps [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...] and
-# install-no-deps [--force, -f] SLACKBUILD sources={DIRECTORY}
-elif [ "$1" == "install-no-deps" ]; then
-  if [ $# -eq 1 ]; then
-    print_usage "must specify SlackBuild with install option."
-  elif [ $# -eq 2 ]; then
-    install_slackbuild $2
   else
-    # Install multiple SlackBuilds (strip off the first argument)
-    install_multiple "${@:2:$#}" 
+    parse_install_opts ${@:2:$#}
+    install_multiple $(get_buildlist ${@:2:$#})
   fi
 
 # remove SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]
@@ -1194,7 +1247,7 @@ elif [ "$1" == "requires" ]; then
     print_usage "must specify a SlackBuild with requires option."
   else
     REQLIST=""
-    list_recursive_reqs $2
+    get_recursive_reqlist $2
     reverse_reqlist
     print_reqlist
   fi
