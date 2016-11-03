@@ -222,55 +222,6 @@ function user_choice ()
 }
 
 ################################################################################
-# Removes a SlackBuild
-function remove_slackbuild ()
-{
-  local BUILD=$1
-  local FORCE=$2
-  local INSTALLEDPKG=$(check_installed "$BUILD")
-
-  # Return if package is not installed
-  if [ "$INSTALLEDPKG" == "Not installed" ]; then
-    echo "There is no installed SlackBuild called $BUILD."
-
-  # Otherwise remove the package
-  else
-    local CHOICE=""
-    local MSG=""
-    
-    # Ask for confirmation before removing
-    if [ "$FORCE" != "--force" ]; then
-      MSG="Remove $BUILD?"
-      user_choice "$MSG" CHOICE
-      if [ "$CHOICE" == "y" ]; then
-        removepkg $INSTALLEDPKG
-      fi 
-    else
-      removepkg $INSTALLEDPKG
-    fi
-  fi
-}
-
-################################################################################
-# Removes multiple SlackBuilds
-function remove_multiple ()
-{
-  # Determine if --force option has been selected
-  if [[ "$1" == "--force" || "$1" == "-f" ]]; then
-    local FORCE="--force"
-    local BUILDS="${@:2:$#}"
-  else
-    local FORCE=""
-    local BUILDS="$@"
-  fi
-  local BUILD=""
-  for BUILD in $BUILDS
-  do
-    remove_slackbuild $BUILD $FORCE
-  done
-}
-
-################################################################################
 # Gets list of SlackBuilds specified on the command line
 function get_buildlist
 {
@@ -323,7 +274,6 @@ function parse_install_opts ()
     fi
   done
 }
-
 
 ################################################################################
 # Extracts URLs of source files to download
@@ -599,7 +549,6 @@ function install_multiple ()
       echo "Searching for dependencies of $BUILD ..."
       REQLIST=""
       get_recursive_reqlist $BUILD
-      reverse_reqlist
 
       # Ask for confirmation
       if [ -n "$REQLIST" ]; then
@@ -627,6 +576,72 @@ function install_multiple ()
     # Install requested SlackBuild
     install_slackbuild $BUILD
     echo
+  done
+}
+
+################################################################################
+# Parses command-line options for remove
+function parse_remove_opts ()
+{
+  # Defaults
+  FORCE=0
+
+  local ARG
+  for ARG in $@
+  do
+    if [ "${ARG:0:1}" == "-" ]; then
+      case $ARG in
+      "--force" | "-f")
+          FORCE=1
+          ;;
+      *)
+          echo "Unrecognized remove option $ARG."
+          exit 1
+          ;;
+      esac
+    fi
+  done
+}
+
+################################################################################
+# Removes a SlackBuild
+function remove_slackbuild ()
+{
+  local BUILD=$1
+  local INSTALLEDPKG=$(check_installed "$BUILD")
+  local CHOICE MSG
+
+  # Return if package is not installed
+  if [ "$INSTALLEDPKG" == "Not installed" ]; then
+    echo "There is no installed SlackBuild called $BUILD."
+
+  # Otherwise remove the package
+  else
+    CHOICE=""
+    MSG=""
+    
+    # Ask for confirmation before removing
+    if [ $FORCE -eq 0 ]; then
+      MSG="Remove $BUILD?"
+      user_choice "$MSG" CHOICE
+      if [ "$CHOICE" == "y" ]; then
+        removepkg $INSTALLEDPKG
+      fi 
+    else
+      removepkg $INSTALLEDPKG
+    fi
+  fi
+}
+
+################################################################################
+# Removes multiple SlackBuilds
+function remove_multiple ()
+{
+  local BUILD
+
+  for BUILD in $@
+  do
+    remove_slackbuild $BUILD
   done
 }
 
@@ -741,6 +756,7 @@ function check_all_upgrades ()
 function get_recursive_reqlist ()
 {
   local BUILD=$1
+  local REQARR I
 
   # Get the directory for the requested SlackBuild
   local BUILDPATH=$(find "$CDIR" -maxdepth 2 -mindepth 2 -name "$BUILD")
@@ -766,15 +782,9 @@ function get_recursive_reqlist ()
       fi
     done
   fi
-}
 
-################################################################################
-# Reverse order of REQLIST so that lower dependencies are listed first
-function reverse_reqlist ()
-{
-  local REQARR=($REQLIST)
-  local I
-
+  # Reverse order so that lower dependencies are listed first
+  REQARR=($REQLIST)
   REQLIST=""
   for ((I = ${#REQARR[@]} - 1; I >= 0; I--))
   do
@@ -1209,7 +1219,7 @@ if [ $# -lt 1 ]; then
 elif [ "$1" == "update" ]; then
   update 
 
-# install [--force, -f] SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]
+# install
 elif [ "$1" == "install" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify SlackBuild with install option."
@@ -1218,15 +1228,13 @@ elif [ "$1" == "install" ]; then
     install_multiple $(get_buildlist ${@:2:$#})
   fi
 
-# remove SLACKBUILD1 [SLACKBUILD2 SLACKBUILD3 ...]
+# remove
 elif [ "$1" == "remove" ]; then
   if [ $# -eq 1 ]; then
     print_usage "must specify SlackBuild with remove option."
-  elif [ $# -eq 2 ]; then
-    remove_slackbuild $2
   else
-    # Remove multiple SlackBuilds (strip off the first argument)
-    remove_multiple "${@:2:$#}"
+    parse_remove_opts ${@:2:$#}
+    remove_multiple $(get_buildlist ${@:2:$#})
   fi 
 
 # check-upgrade SLACKBUILD
@@ -1248,7 +1256,6 @@ elif [ "$1" == "requires" ]; then
   else
     REQLIST=""
     get_recursive_reqlist $2
-    reverse_reqlist
     print_reqlist
   fi
 
