@@ -173,7 +173,7 @@ function check_installed ()
 
   # There can be multiple packages fitting the pattern, so loop through them
   # and check against requested
-  if [ "$PKGLIST" != "" ]; then
+  if [ -n "$PKGLIST" ]; then
     for PKG in $PKGLIST
     do
       PKG=$(basename "$PKG")
@@ -297,7 +297,7 @@ function sources_from_info ()
 
   # Use regular DOWNLOAD= line for x86 architecture, if there's no 64-bit source
   # download, or if forcing 32-bit
-  if [[ "$ARCH" != "x86_64" || "$SOURCES" == "" || "$FORCE32" == "force-32-bit" ]]; then
+  if [[ "$ARCH" != "x86_64" || -z "$SOURCES" || "$FORCE32" == "force-32-bit" ]]; then
     SOURCES=$DOWNLOAD
   fi
 
@@ -328,7 +328,7 @@ function md5sums_from_info ()
 
   # Use regular MD5SUM= line for x86 architecture, if there's no 64-bit source
   # download, or if forcing 32-bit
-  if [[ "$ARCH" != "x86_64" || "$SOURCES" == "" || "$FORCE32" == "force-32-bit" ]]; then
+  if [[ "$ARCH" != "x86_64" || -z "$SOURCES" || "$FORCE32" == "force-32-bit" ]]; then
     MD5SUMS=$MD5SUM
   fi
 
@@ -360,7 +360,7 @@ function install_slackbuild ()
   # Get SlackBuild path
   cd $CDIR
   local BUILDPATH=$(find . -maxdepth 2 -mindepth 2 -name "$BUILD")
-  if [ "$BUILDPATH" == "" ]; then
+  if [ -z "$BUILDPATH" ]; then
     echo "Error: there is no SlackBuild named $BUILD."
     exit 1
   fi
@@ -400,7 +400,7 @@ function install_slackbuild ()
   # Remove any package in /tmp with $BUILD in the name (could mess up
   # installation later)
   local PKG=$(find /tmp -maxdepth 1 -name "$BUILD*.$PKGTYPE")
-  if [ "$PKG" != "" ]; then
+  if [ -n "$PKG" ]; then
     rm $PKG
   fi
 
@@ -496,7 +496,7 @@ function install_slackbuild ()
 
   # Exit if not successful
   PKG=$(find /tmp -maxdepth 1 -name "$BUILD*.$PKGTYPE")
-  if [ "$PKG" == "" ]; then
+  if [ -z "$PKG" ]; then
     echo "Error: build failed."
 
     # Remove source code
@@ -656,7 +656,7 @@ function check_upgrade ()
 
   # Check if SlackBuild exists and get current version
   BUILDPATH=$(find . -maxdepth 2 -mindepth 2 -name "$BUILD")
-  if [ "$BUILDPATH" == "" ]; then
+  if [ -z "$BUILDPATH" ]; then
     echo "Error: there is no SlackBuild named $BUILD."
     return
   fi
@@ -816,7 +816,7 @@ function list_inv_reqs ()
     . "$NAME".info
     
     # Loop through and see if specified SlackBuild is mentioned
-    if [ "$REQUIRES" != "" ]; then
+    if [ -n "$REQUIRES" ]; then
       for REQ in $REQUIRES
       do
         if [ "$REQ" == "$BUILD" ]; then
@@ -854,7 +854,7 @@ function show_info ()
   # Get the directory for the requested SlackBuild
   echo "Searching for $BUILD ..."
   local BUILDPATH=$(find . -maxdepth 2 -mindepth 2 -name "$BUILD")
-  if [ "$BUILDPATH" == "" ]; then
+  if [ -z "$BUILDPATH" ]; then
     echo "There is no SlackBuild named $BUILD."
     return
   fi
@@ -895,7 +895,7 @@ function search ()
   echo "Searching for $PATTERN ..."
   local BUILDS=$(find . -maxdepth 2 -mindepth 2 -type d | grep -i "$PATTERN")
 
-  if [ "$BUILDS" == "" ]; then
+  if [ -z "$BUILDS" ]; then
     echo "There is no SlackBuild matching the pattern $PATTERN."
   else
     # Get GROUP/NAME/STATUS
@@ -930,7 +930,7 @@ function search_descriptions ()
   local PTRNFILES=$(find . -maxdepth 3 -mindepth 3 -name README | xargs grep -il "$PATTERN" | sort -t "/" -k 3)
 
   # Display list of SlackBuilds
-  if [ "$PTRNFILES" != "" ]; then
+  if [ -n "$PTRNFILES" ]; then
     echo "The following SlackBuilds have $PATTERN in the README file:"
     for BUILD in $PTRNFILES
     do
@@ -1003,7 +1003,7 @@ function list_orphans ()
       . "$NAME".info
 
       # Loop through and see if specified SlackBuild is mentioned
-      if [ "$REQUIRES" != "" ]; then
+      if [ -n "$REQUIRES" ]; then
         for REQ in $REQUIRES
         do
           if [ "$REQ" == "$CHECKNAME" ]; then
