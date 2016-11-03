@@ -637,55 +637,17 @@ function remove_multiple ()
 }
 
 ################################################################################
-# Checks for upgrade of specified Slackbuild
-function check_upgrade ()
-{
-  local BUILD=$1
-
-  # Check first if it is installed and get installed version
-  local INSTALLEDPKG=$(check_installed "$BUILD")
-  if [ "$INSTALLEDPKG" == "Not installed" ]; then
-    echo "$BUILD is not installed."
-    return
-  else
-    local INSTALLEDVERSION=$(get_installed_version "$INSTALLEDPKG") 
-  fi
-
-  # Go to top-level git directory
-  cd $CDIR
-
-  # Check if SlackBuild exists and get current version
-  BUILDPATH=$(find . -maxdepth 2 -mindepth 2 -name "$BUILD")
-  if [ -z "$BUILDPATH" ]; then
-    echo "Error: there is no SlackBuild named $BUILD."
-    return
-  fi
-  local CURRENTVERSION=$(get_current_version "$BUILD")
-
-  # Compare version
-  if [ "$INSTALLEDVERSION" == "$CURRENTVERSION" ]; then
-    echo "$BUILD is up to date."
-    echo "Installed version: $INSTALLEDVERSION"
-  else
-    echo "$BUILD can be upgraded."
-    echo "Installed version: $INSTALLEDVERSION"
-    echo "Current version: $CURRENTVERSION"
-  fi
-}
-
-################################################################################
 # Checks all installed SlackBuilds for upgrades
-function check_all_upgrades ()
+function list_upgrades ()
 {
-  local PKG BUILD INSTALLEDVERSION CURRENTVERSION UPDATELIST UPTODATELIST 
-  local INSTALLEDVERSIONLIST1 INSTALLEDVERSIONLIST2 CURRENTVERSIONLIST
+  local PKG BUILD INSTALLEDVERSION CURRENTVERSION UPDATELIST
+  local INSTALLEDVERSIONLIST CURRENTVERSIONLIST
 
   # Get list of installed SlackBuilds
   local PKGLIST=$(find /var/log/packages -maxdepth 1 -name "*_$TAG" | sort)
 
   # Loop through installed packages and check for updates
   local UPDATECOUNT=0
-  local UPTODATECOUNT=0
   for PKG in $PKGLIST
   do
     PKG=$(basename "$PKG")
@@ -698,38 +660,23 @@ function check_all_upgrades ()
     CURRENTVERSION=$(get_current_version "$BUILD")
 
     # Compare versions and tally up-to-date and out-of-date
-    if [ "$INSTALLEDVERSION" == "$CURRENTVERSION" ]; then
-      UPTODATELIST["$UPTODATECOUNT"]="$BUILD"
-      INSTALLEDVERSIONLIST1["$UPTODATECOUNT"]="$INSTALLEDVERSION"
-      let "UPTODATECOUNT+=1"
-    else
+    if [ "$INSTALLEDVERSION" != "$CURRENTVERSION" ]; then
       UPDATELIST["$UPDATECOUNT"]="$BUILD"
-      INSTALLEDVERSIONLIST2["$UPDATECOUNT"]="$INSTALLEDVERSION"
+      INSTALLEDVERSIONLIST["$UPDATECOUNT"]="$INSTALLEDVERSION"
       CURRENTVERSIONLIST["$UPDATECOUNT"]="$CURRENTVERSION"
       let "UPDATECOUNT+=1"
     fi
   done
 
   # Print a summary
-
-  echo ""
-  echo "$UPTODATECOUNT SlackBuilds are up to date."
-  echo "-----------------------------------------------------------------------"
-  local I=0
-  while [ $I -lt $UPTODATECOUNT ];
-  do
-    echo "${UPTODATELIST[$I]}-${INSTALLEDVERSIONLIST1[$I]}"
-    let "I+=1"
-  done
-
   echo ""
   echo "$UPDATECOUNT SlackBuilds can be upgraded."
   echo "-----------------------------------------------------------------------"
-  I=0
+  local I=0
   while [ $I -lt $UPDATECOUNT ];
   do
     echo "Name: ${UPDATELIST[$I]}"
-    echo "Installed version: ${INSTALLEDVERSIONLIST2[$I]}"
+    echo "Installed version: ${INSTALLEDVERSIONLIST[$I]}"
     echo "Current version: ${CURRENTVERSIONLIST[$I]}"
     echo ""
     let "I+=1"
@@ -1127,16 +1074,22 @@ function print_usage ()
   echo "  command. Options:"
   echo "  --force, -f: removes without asking for confirmation first."
   echo
-  echo "check-upgrade"
-  echo "  Checks whether the SlackBuild listed on the command line after the"
-  echo "  check-upgrade command can be upgraded."
-  echo
-  echo "check-all-upgrades"
+  echo "list-upgrades"
   echo "  Checks all installed SlackBuilds for upgrades and prints a summary."
   echo
+  echo "upgrade-all"
+  echo "  Upgrades all installed SlackBuilds that are out of date. Options are"
+  echo "  the same as those for 'sbomgr install':"
+  echo "  --force, -f: upgrades or reinstalls SlackBuilds without asking for"
+  echo "               confirmation."
+  echo "  --no-deps, -n: installs only the SlackBuilds that are out of date"
+  echo "                 without resolving dependencies."
+  echo "  sources=DIRECTORY: looks for source files in the specified directory"
+  echo "                     instead of downloading them from the internet."
+  echo
   echo "requires"
-  echo "  Resolves and displays dependencies for a SlackBuild, listed on the" 
-  echo "  command line after the requires command, and shows installation"
+  echo "  For the SlackBuild listed on the command line after the requires"
+  echo "  command, resolves and displays dependencies and shows installation"
   echo "  status."
   echo
   echo "requirement-of"
@@ -1207,17 +1160,9 @@ elif [ "$1" == "remove" ]; then
     remove_multiple $(get_buildlist ${@:2:$#})
   fi 
 
-# check-upgrade
-elif [ "$1" == "check-upgrade" ]; then
-  if [ $# -eq 1 ]; then
-    print_usage "must specify a SlackBuild with check-upgrade option."
-  else
-    check_upgrade $2
-  fi
-
-# check-all-upgrades
-elif [ "$1" == "check-all-upgrades" ]; then
-  check_all_upgrades
+# list-upgrades
+elif [ "$1" == "list-upgrades" ]; then
+  list_upgrades
 
 # requires
 elif [ "$1" == "requires" ]; then
