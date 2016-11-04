@@ -680,7 +680,7 @@ function get_upgradelist ()
 # Checks all installed SlackBuilds for upgrades
 function list_upgrades ()
 {
- local BUILD INSTALLEDVERSION CURRENTVERSION
+ local PKG BUILD INSTALLEDVERSION CURRENTVERSION
  local INSTALLEDVERSIONLIST CURRENTVERSIONLIST LEN
 
  # Get list of upgradable SlackBuilds
@@ -691,11 +691,12 @@ function list_upgrades ()
  if [ -n "$UPGRADELIST" ]; then
    for BUILD in $UPGRADELIST
    do
-     INSTALLEDVERSION=$(get_installed_version "$PKG")
+     PKG=$(find /var/log/packages -maxdepth 1 -name "$BUILD*")
+     INSTALLEDVERSION=$(get_installed_version $(basename "$PKG"))
      CURRENTVERSION=$(get_current_version "$BUILD")
      LEN=${#CURRENTVERSION}
-     INSTALLEDVERSIONLIST["$UPDATECOUNT"]="$INSTALLEDVERSION"
-     CURRENTVERSIONLIST["$UPDATECOUNT"]="$CURRENTVERSION"
+     INSTALLEDVERSIONLIST["$UPGRADECOUNT"]="$INSTALLEDVERSION"
+     CURRENTVERSIONLIST["$UPGRADECOUNT"]="$CURRENTVERSION"
      let "UPGRADECOUNT+=1"
    done
 
