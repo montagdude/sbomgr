@@ -245,12 +245,6 @@ function get_buildlist
 # Parses command-line options for install
 function parse_install_opts ()
 {
-  # Defaults
-  FORCE=0
-  NODEPS=0
-  SOURCEOPT=0
-  SOURCEDIR=""
-
   local ARG
   for ARG in $@
   do
@@ -576,9 +570,6 @@ function install_multiple ()
 # Parses command-line options for remove
 function parse_remove_opts ()
 {
-  # Defaults
-  FORCE=0
-
   local ARG
   for ARG in $@
   do
@@ -1200,6 +1191,12 @@ function print_usage ()
 
 ################################################################################
 # Main program
+
+# Defaults for CLOs
+FORCE=0
+NODEPS=0
+SOURCEOPT=0
+SOURCEDIR=""
 
 # Not enough command line arguments
 if [ $# -lt 1 ]; then
