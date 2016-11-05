@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.4.2
+VERSION=0.4.3
 
 ################################################################################
 # Removes quotes around string
@@ -535,6 +535,7 @@ function install_multiple ()
       echo "Searching for dependencies of $BUILD ..."
       REQLIST=""
       buildorder_reqlist $BUILD
+      REQLIST=$(trim_uptodate $REQLIST)
 
       # Ask for confirmation
       if [ -n "$REQLIST" ]; then
@@ -845,6 +846,32 @@ function buildorder_reqlist ()
 
   get_recursive_reqlist $BUILD
   reverse_reqlist
+}
+
+################################################################################
+# Removes SlackBuilds that are already up-to-date from a list of SlackBuilds
+function trim_uptodate ()
+{
+  local BUILDS=$@
+  local BUILD PKG INSTALLEDVERSION CURRENTVERSION LEN
+
+  for BUILD in $BUILDS
+  do
+    if [ "$(check_installed $BUILD)" == "Not installed" ]; then
+      echo $BUILD
+    else
+      # Check if an upgrade is available
+      PKG=$(find /var/log/packages -maxdepth 1 -name "$BUILD*")
+      INSTALLEDVERSION=$(get_installed_version $(basename "$PKG"))
+      CURRENTVERSION=$(get_current_version "$BUILD")
+      LEN=${#CURRENTVERSION}
+
+      # Compare versions
+      if [ "${INSTALLEDVERSION:0:$LEN}" != "$CURRENTVERSION" ]; then
+        echo $BUILD
+      fi
+    fi
+  done
 }
 
 ################################################################################
