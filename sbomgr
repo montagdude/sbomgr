@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.4.1
+VERSION=0.4.2
 
 ################################################################################
 # Removes quotes around string
@@ -534,7 +534,7 @@ function install_multiple ()
     if [ $NODEPS -eq 0 ]; then
       echo "Searching for dependencies of $BUILD ..."
       REQLIST=""
-      get_recursive_reqlist $BUILD
+      buildorder_reqlist $BUILD
 
       # Ask for confirmation
       if [ -n "$REQLIST" ]; then
@@ -822,14 +822,29 @@ function get_recursive_reqlist ()
       fi
     done
   fi
+}
 
-  # Reverse order so that lower dependencies are listed first
+################################################################################
+# Reverses order of REQLIST so that lower dependencies are listed first
+function reverse_reqlist ()
+{
   REQARR=($REQLIST)
   REQLIST=""
   for ((I = ${#REQARR[@]} - 1; I >= 0; I--))
   do
     REQLIST="$REQLIST ${REQARR[I]}"
   done
+}
+
+################################################################################
+# Gets recursive dependencies of specified SlackBuild in proper order for
+# building (lower dependencies listed first)
+function buildorder_reqlist ()
+{
+  local BUILD=$1
+
+  get_recursive_reqlist $BUILD
+  reverse_reqlist
 }
 
 ################################################################################
@@ -1309,7 +1324,7 @@ elif [ "$1" == "requires" ]; then
     print_usage "must specify a SlackBuild with requires option."
   else
     REQLIST=""
-    get_recursive_reqlist $2
+    buildorder_reqlist $2
     print_reqlist
   fi
 
