@@ -367,14 +367,17 @@ function install_slackbuild ()
   if [ "$INSTALLEDPKG" != "Not installed" ]; then
     local INSTALLEDVERSION=$(get_installed_version "$INSTALLEDPKG")
     local CURRENTVERSION=$(get_current_version "$BUILD")
+    local LEN=${#CURRENTVERSION}
 
-    # Current version already installed - ask for reinstallation
-    if [ "$INSTALLEDVERSION" == "$CURRENTVERSION" ]; then
+    # Already at most recent version - ask for reinstallation
+    # Some SlackBuilds append to version number during install (e.g. kernel
+    #   modules), so ignore that part when comparing.
+    if [ "${INSTALLEDVERSION:0:$LEN}" == "$CURRENTVERSION" ]; then
       MSG="$BUILD is already at the most recent version. Reinstall?"
 
-    # Installed version out of date - ask for reinstallation
+    # Installed version out of date - ask for upgrade
     else
-      MSG="$BUILD is already installed but out of date. Reinstall?"
+      MSG="$BUILD is already installed but out of date. Upgrade?"
     fi
 
     # Return if user chooses to
@@ -696,17 +699,17 @@ function get_upgradelist ()
 # Upgrades one or more SlackBuilds
 function upgrade_multiple ()
 {
-  local BUILD PKG INSTALLEDVERSION CURRENTVERSION LEN
+  local BUILD INSTALLEDPKG INSTALLEDVERSION CURRENTVERSION LEN
 
   for BUILD in $@
   do
     # Check if an upgrade is available
-    PKG=$(find /var/log/packages -maxdepth 1 -name "$BUILD*")
-    if [ -z "$PKG" ]; then
-      echo "There is no SlackBuild named $BUILD."
+    local INSTALLEDPKG=$(check_installed "$BUILD")
+    if [ "$INSTALLEDPKG" == "Not installed" ]; then
+      echo "$BUILD is not installed."
       exit 1
     fi
-    INSTALLEDVERSION=$(get_installed_version $(basename "$PKG"))
+    INSTALLEDVERSION=$(get_installed_version "$INSTALLEDPKG")
     CURRENTVERSION=$(get_current_version "$BUILD")
     LEN=${#CURRENTVERSION}
 
@@ -753,7 +756,7 @@ function upgrade_all ()
 # Checks all installed SlackBuilds for upgrades
 function list_upgrades ()
 {
-  local PKG BUILD INSTALLEDVERSION CURRENTVERSION UPGRADEARR
+  local INSTALLEDPKG BUILD INSTALLEDVERSION CURRENTVERSION UPGRADEARR
   local INSTALLEDVERSIONLIST CURRENTVERSIONLIST LEN
 
   # Get list of upgradable SlackBuilds
@@ -764,8 +767,8 @@ function list_upgrades ()
   if [ -n "$UPGRADELIST" ]; then
     for BUILD in $UPGRADELIST
     do
-      PKG=$(find /var/log/packages -maxdepth 1 -name "$BUILD*")
-      INSTALLEDVERSION=$(get_installed_version $(basename "$PKG"))
+      INSTALLEDPKG=$(check_installed "$BUILD")
+      INSTALLEDVERSION=$(get_installed_version "$INSTALLEDPKG")
       CURRENTVERSION=$(get_current_version "$BUILD")
       LEN=${#CURRENTVERSION}
       INSTALLEDVERSIONLIST["$UPGRADECOUNT"]="$INSTALLEDVERSION"
@@ -854,7 +857,7 @@ function buildorder_reqlist ()
 function trim_uptodate ()
 {
   local BUILDS=$@
-  local BUILD PKG INSTALLEDVERSION CURRENTVERSION LEN
+  local BUILD INSTALLEDPKG INSTALLEDVERSION CURRENTVERSION LEN
 
   for BUILD in $BUILDS
   do
@@ -862,8 +865,8 @@ function trim_uptodate ()
       echo $BUILD
     else
       # Check if an upgrade is available
-      PKG=$(find /var/log/packages -maxdepth 1 -name "$BUILD*")
-      INSTALLEDVERSION=$(get_installed_version $(basename "$PKG"))
+      INSTALLEDPKG=$(check_installed "$BUILD")
+      INSTALLEDVERSION=$(get_installed_version "$INSTALLEDPKG")
       CURRENTVERSION=$(get_current_version "$BUILD")
       LEN=${#CURRENTVERSION}
 
