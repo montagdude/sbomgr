@@ -753,7 +753,7 @@ function upgrade_all ()
 # Checks all installed SlackBuilds for upgrades
 function list_upgrades ()
 {
-  local PKG BUILD INSTALLEDVERSION CURRENTVERSION
+  local PKG BUILD INSTALLEDVERSION CURRENTVERSION UPGRADEARR
   local INSTALLEDVERSIONLIST CURRENTVERSIONLIST LEN
 
   # Get list of upgradable SlackBuilds
@@ -774,6 +774,7 @@ function list_upgrades ()
     done
 
     # Print a summary
+    UPGRADEARR=($UPGRADELIST)
     echo ""
     if [ $UPGRADECOUNT -eq 1 ]; then
       echo "$UPGRADECOUNT SlackBuild can be upgraded."
@@ -784,7 +785,7 @@ function list_upgrades ()
     local I=0
     while [ $I -lt $UPGRADECOUNT ];
     do
-      echo "Name: ${UPGRADELIST[$I]}"
+      echo "Name: ${UPGRADEARR[$I]}"
       echo "Installed version: ${INSTALLEDVERSIONLIST[$I]}"
       echo "Current version: ${CURRENTVERSIONLIST[$I]}"
       echo ""
