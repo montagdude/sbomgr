@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.4.3
+VERSION=0.4.4
 
 ################################################################################
 # Removes quotes around string
@@ -749,6 +749,8 @@ function upgrade_all ()
     # Upgrade SlackBuilds
     UPGRADE=1
     upgrade_multiple $UPGRADELIST
+  else
+    echo "All SlackBuilds are up-to-date."
   fi
 }
 
