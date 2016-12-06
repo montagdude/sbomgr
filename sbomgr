@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.4.4
+VERSION=0.4.5
 
 ################################################################################
 # Removes quotes around string
@@ -80,8 +80,7 @@ function get_current_version ()
   local INFILE=$(find . -maxdepth 3 -mindepth 3 -name "$BUILD".info)
 
   # Get version number from SlackBuild.info
-  local VERSION=$(grep VERSION "$INFILE" | sed 's/VERSION=//')
-  VERSION=$(remove_quotes "$VERSION")
+  . $INFILE
 
   echo $VERSION
 }
