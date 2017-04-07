@@ -114,6 +114,7 @@ function get_git_branch ()
 function checkout_git_branch ()
 {
   local GITBRANCH="$1"
+  local CHECK=0
 
   # Go to top-level git tree
   cd $CDIR
@@ -124,7 +125,10 @@ function checkout_git_branch ()
   # Checkout new branch if needed
   if [ "$CURRBRANCH" != "$GITBRANCH" ]; then
     git checkout $GITBRANCH
+    CHECK=$?
   fi
+
+  echo $CHECK
 }
 
 ################################################################################
@@ -134,6 +138,7 @@ function update ()
   # Check if Ponce's git repo is being used
   local PONCEREPO=$(check_ponce_repo)
   local BASEDIR=$(basename $CDIR)
+  local CHECK=0
   
   # Create local git directory if needed
   if [ ! -d "$CDIR" ]; then
@@ -141,9 +146,16 @@ function update ()
     cd $CDIR/../
     rm -rf $BASEDIR
     git clone $REPO $BASEDIR
+    CHECK=$?
+    if [ $CHECK -ne 0 ]; then
+      exit $CHECK
+    fi
     if ! $PONCEREPO; then
       cd $BASEDIR
-      checkout_git_branch $BRANCH
+      CHECK=$(checkout_git_branch $BRANCH)
+      if [ $CHECK -ne 0 ]; then
+        exit $CHECK
+      fi
     fi
 
   # Master branch can just use git pull, but Ponce's must be re-downloaded
@@ -151,12 +163,23 @@ function update ()
   else
     if ! $PONCEREPO; then
       cd $CDIR
-      checkout_git_branch $BRANCH
+      CHECK=$(checkout_git_branch $BRANCH)
+      if [ $CHECK -ne 0 ]; then
+        exit $CHECK
+      fi
       git pull
+      CHECK=$?
+      if [ $CHECK -ne 0 ]; then
+        exit $CHECK
+      fi
     else
       cd $CDIR/../
       rm -rf $BASEDIR
       git clone $REPO $BASEDIR 
+      CHECK=$?
+      if [ $CHECK -ne 0 ]; then
+        exit $CHECK
+      fi
     fi
   fi
 }
