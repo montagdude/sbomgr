@@ -167,6 +167,8 @@ function update ()
       if [ $CHECK -ne 0 ]; then
         exit $CHECK
       fi
+      git clean -df
+      git checkout -- .
       git pull
       CHECK=$?
       if [ $CHECK -ne 0 ]; then
