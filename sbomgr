@@ -124,7 +124,7 @@ function checkout_git_branch ()
 
   # Checkout new branch if needed
   if [ "$CURRBRANCH" != "$GITBRANCH" ]; then
-    git checkout $GITBRANCH
+    git checkout $GITBRANCH > /dev/null
     CHECK=$?
   fi
 
