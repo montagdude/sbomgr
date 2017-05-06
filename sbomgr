@@ -253,7 +253,17 @@ function parse_install_opts ()
   local ARG
   for ARG in $@
   do
-    if [ "${ARG%=*}" == "sources" ]; then
+    if [ "${ARG:0:1}" == "-" ]; then
+      case $ARG in
+      "--force" | "-f")
+          FORCE=1
+          ;;
+      *)
+          echo "Unrecognized install option $ARG."
+          exit 1
+          ;;
+      esac
+    elif [ "${ARG%=*}" == "sources" ]; then
       SOURCEOPT=1
       SOURCEDIR=${ARG#*=}
     fi
@@ -365,7 +375,7 @@ function install_slackbuild ()
     MSG="Do you want to remove existing package and reinstall?"
 
     # Return if user chooses to
-    if [[ $FORCE -eq 0 && $UPGRADE -eq 0 ]]; then
+    if [ $FORCE -eq 0 ]; then
       user_choice "$MSG" CHOICE
       if [ "$CHOICE" != "y" ]; then
         return
@@ -760,6 +770,8 @@ function print_usage ()
   echo "install"
   echo "  Installs, reinstalls, or upgrades SlackBuilds listed on the command"
   echo "  line after the install command. Options:"
+  echo "  --force, -f: if package is already installed, reinstalls without"
+  echo "               asking for confirmation first."
   echo "  sources=DIRECTORY: looks for source files in the specified directory"
   echo "                     instead of downloading them from the internet."
   echo
@@ -799,6 +811,7 @@ function print_usage ()
 # Main program
 
 # Defaults for CLOs
+FORCE=0
 SOURCEOPT=0
 SOURCEDIR=""
 
