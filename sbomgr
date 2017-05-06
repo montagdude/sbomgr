@@ -372,9 +372,10 @@ function install_slackbuild ()
     local CURRENTVERSION=$(get_current_version "$BUILD")
 
     # Ask about reinstallation
-    echo "$BUILD is already installed. Installed package: $INSTALLEDPKG"
+    echo "$BUILD is already installed."
+    echo "Installed package: $INSTALLEDPKG"
     echo "Available version: $CURRENTVERSION"
-    MSG="Do you want to remove existing package and reinstall?"
+    MSG="Do you want to remove the existing package and reinstall?"
 
     # Return if user chooses to
     if [ $FORCE -eq 0 ]; then
