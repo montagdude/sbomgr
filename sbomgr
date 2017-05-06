@@ -576,7 +576,7 @@ function remove_slackbuild ()
     
     # Ask for confirmation before removing
     if [ $FORCE -eq 0 ]; then
-      MSG="Remove $BUILD?"
+      MSG="Remove $INSTALLEDPKG?"
       user_choice "$MSG" CHOICE
       if [ "$CHOICE" == "y" ]; then
         removepkg $INSTALLEDPKG
