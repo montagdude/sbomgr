@@ -802,10 +802,10 @@ function print_usage ()
   echo "  Displays SlackBuilds in the group specified on the command line after"
   echo "  the browse-group command."
   echo
-  echo "--version, v"
+  echo "--version, -v"
   echo "  Prints sbomgr version."
   echo
-  echo "--help, h"
+  echo "--help, -h"
   echo "  Shows this usage information."
   echo 
 }
