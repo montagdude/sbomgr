@@ -51,23 +51,6 @@ function get_installed_name ()
 }
 
 ################################################################################
-# Gets SlackBuild version from installed package name in /var/log/packages
-function get_installed_version ()
-{
-  local PKG=$1
-
-  # Get rid of trailing stuff
-  local VERSION=${PKG%*-*} # Build number / tag
-  VERSION=${VERSION%*-*}   # Architecture-number
-  VERSION=${VERSION%*-*}   # Architecture
-
-  # Get rid of leading package name
-  local TEMP=${VERSION%*-*}
-  VERSION=${VERSION#$TEMP-*}
-  echo $VERSION
-}
-
-################################################################################
 # Gets SlackBuild version from VERSION string in *.info file
 function get_current_version ()
 {
@@ -371,6 +354,24 @@ function install_slackbuild ()
 
   # Check if SlackBuild is installed on system and get package name
   local INSTALLEDPKG=$(check_installed "$BUILD")
+
+  # Offer reinstallation if it is already installed
+  if [ "$INSTALLEDPKG" != "Not installed" ]; then
+    local CURRENTVERSION=$(get_current_version "$BUILD")
+
+    # Ask about reinstallation
+    echo "$BUILD is already installed. Installed package: $INSTALLEDPKG"
+    echo "Available version: $CURRENTVERSION"
+    MSG="Do you want to remove existing package and reinstall?"
+
+    # Return if user chooses to
+    if [[ $FORCE -eq 0 && $UPGRADE -eq 0 ]]; then
+      user_choice "$MSG" CHOICE
+      if [ "$CHOICE" != "y" ]; then
+        return
+      fi
+    fi
+  fi
 
   # Go to SlackBuild directory
   cd $BUILDPATH
