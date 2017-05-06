@@ -236,7 +236,9 @@ function get_buildlist
 
   for ARG in $@
   do
-    if [ "${ARG%=*}" == "sources" ]; then
+    if [ "${ARG:0:1}" == "-" ]; then
+      continue
+    elif [ "${ARG%=*}" == "sources" ]; then
       continue
     else
       BUILDLIST="$BUILDLIST $ARG"
