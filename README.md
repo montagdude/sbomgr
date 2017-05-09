@@ -2,7 +2,7 @@
 
 Overview
 ================================================================================
-sbomgr is a tool to automate installation of packages from SlackBuilds.org (SBo) or other git-based SlackBuild repositories. It works by cloning the SBo git repository and running the SlackBuild scripts along with upgradepkg and removepkg. It is meant to be simple and light; it does not resolve dependencies or attempt to decide for you which packages should be upgraded (or even keep track of that). However, it pairs naturally with sboui to add these features and many more.
+sbomgr is a tool to automate installation of packages from SlackBuilds.org (SBo) or other git-based SlackBuild repositories. It works by cloning the SBo git repository and running the SlackBuild scripts along with upgradepkg and removepkg. It is meant to be simple and light; it does not resolve dependencies or attempt to decide for you which packages should be upgraded (or even keep track of that). However, it pairs naturally with sboui to add these features and many more (see section below for more details).
 
 Installation
 ================================================================================
