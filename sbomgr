@@ -511,6 +511,9 @@ function install_slackbuild ()
   if [ "$CLEAN_PACKAGE" == "yes" ]; then
     rm $PKG
   fi
+  if [ "$CLEAN_TMP" == "yes" ]; then
+    rm -rf "$TMPDIR"/*
+  fi
   if [[ $SOURCEOPT -eq 0 || "$(readlink -f $SOURCEDIR)" != "$CDIR" ]]; then
     remove_sources $SOURCES
   fi
