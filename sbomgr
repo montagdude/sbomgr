@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.5.1
+VERSION=0.5.2
 
 ################################################################################
 # Removes quotes around string
@@ -223,7 +223,7 @@ function user_choice ()
     fi
   done
 
-  # This trick is needed to echo to stdout. See usage in remove_slackbuild.
+  # This trick is needed to echo to stdout. See usage in install_slackbuild.
   eval $__CHOICE="'$TEMPCHOICE'"
 }
 
@@ -537,69 +537,6 @@ function install_multiple ()
 }
 
 ################################################################################
-# Parses command-line options for remove
-function parse_remove_opts ()
-{
-  local ARG
-  for ARG in $@
-  do
-    if [ "${ARG:0:1}" == "-" ]; then
-      case $ARG in
-      "--force" | "-f")
-          FORCE=1
-          ;;
-      *)
-          echo "Unrecognized remove option $ARG."
-          exit 1
-          ;;
-      esac
-    fi
-  done
-}
-
-################################################################################
-# Removes a SlackBuild
-function remove_slackbuild ()
-{
-  local BUILD=$1
-  local INSTALLEDPKG=$(check_installed "$BUILD")
-  local CHOICE MSG
-
-  # Return if package is not installed
-  if [ "$INSTALLEDPKG" == "Not installed" ]; then
-    echo "There is no installed SlackBuild called $BUILD."
-
-  # Otherwise remove the package
-  else
-    CHOICE=""
-    MSG=""
-    
-    # Ask for confirmation before removing
-    if [ $FORCE -eq 0 ]; then
-      MSG="Remove $INSTALLEDPKG?"
-      user_choice "$MSG" CHOICE
-      if [ "$CHOICE" == "y" ]; then
-        removepkg $INSTALLEDPKG
-      fi 
-    else
-      removepkg $INSTALLEDPKG
-    fi
-  fi
-}
-
-################################################################################
-# Removes multiple SlackBuilds
-function remove_multiple ()
-{
-  local BUILD
-
-  for BUILD in $@
-  do
-    remove_slackbuild $BUILD
-  done
-}
-
-################################################################################
 # Shows info from README and README.SLACKWARE
 function show_info ()
 {
@@ -778,11 +715,6 @@ function print_usage ()
   echo "  sources=DIRECTORY: looks for source files in the specified directory"
   echo "                     instead of downloading them from the internet."
   echo
-  echo "remove"
-  echo "  Removes the SlackBuilds listed on the command line after the remove"
-  echo "  command. Options:"
-  echo "  --force, -f: removes without asking for confirmation first."
-  echo
   echo "search"
   echo "  Searches for SlackBuilds in the repository whose name includes the"
   echo "  pattern listed on the command line after the search command."
@@ -834,15 +766,6 @@ elif [ "$1" == "install" ]; then
     parse_install_opts ${@:2:$#}
     install_multiple $(get_buildlist ${@:2:$#})
   fi
-
-# remove
-elif [ "$1" == "remove" ]; then
-  if [ $# -eq 1 ]; then
-    print_usage "must specify SlackBuild with remove option."
-  else
-    parse_remove_opts ${@:2:$#}
-    remove_multiple $(get_buildlist ${@:2:$#})
-  fi 
 
 # search
 elif [ "$1" == "search" ]; then
