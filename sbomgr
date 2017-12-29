@@ -45,7 +45,6 @@ function get_installed_name ()
   # Get rid of trailing stuff
   local BUILD=${PKG%*-*} # Build number / tag
   BUILD=${BUILD%*-*}     # Architecture-number
-  BUILD=${BUILD%*-*}     # Architecture
   BUILD=${BUILD%*-*}     # Version
   echo $BUILD
 }
