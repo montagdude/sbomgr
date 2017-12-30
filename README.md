@@ -1,5 +1,9 @@
 # sbomgr
 
+Deprecation notice
+================================================================================
+After version 0.6.0, sbomgr will be merged into [sboui](https://github.com/montagdude/sboui) as sboui-backend. No more commits will occur in this repository. If you wish to keep using sbomgr, it is recommended to install sboui instead. sboui-backend can still be used from the command line just like sbomgr, or you can take advantage of the sboui frontend as well, which provides many additional features.
+
 Overview
 ================================================================================
 sbomgr is a tool to automate installation of packages from SlackBuilds.org (SBo) or other git-based SlackBuild repositories. It works by cloning the SBo git repository and running the SlackBuild scripts along with upgradepkg and removepkg. It is meant to be simple and light; it does not resolve dependencies or attempt to decide for you which packages should be upgraded (or even keep track of that). However, it pairs naturally with sboui to add these features and many more (see section below for more details).
