@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.5.2
+VERSION=0.6
 
 ################################################################################
 # Removes quotes around string
@@ -445,7 +445,7 @@ function install_slackbuild ()
 
     # Download and check for error ($? is the return value)
     else
-      CHKDNLD=$(wget "$SOURCE")
+      CHKDNLD=$(curl -O -J -L "$SOURCE")
       if [ $? != 0 ]; then         
         echo "There was an error downloading the source file."
         SOURCERR=1
