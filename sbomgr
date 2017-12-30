@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION="0.6_dev"
+VERSION="0.6.0"
 
 ################################################################################
 # Removes quotes around string
