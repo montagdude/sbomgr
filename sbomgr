@@ -425,6 +425,11 @@ function install_slackbuild ()
   # Remove any existing source files
   remove_sources "$SOURCES"
 
+  # Create file to mark time
+  if [ "$CLEAN_TMP" == "yes" ]; then
+    touch $TMPDIR/sbomgr.timemarker
+  fi
+
   # Download and check MD5SUMs
   local SOURCERR=0
   local MD5ERR=0
@@ -508,7 +513,8 @@ function install_slackbuild ()
     rm $PKG
   fi
   if [ "$CLEAN_TMP" == "yes" ]; then
-    rm -rf "$TMPDIR"/*
+    find $TMPDIR -mindepth 1 -maxdepth 1 -type d -cnewer $TMPDIR/sbomgr.timemarker -exec rm -rf {} \;
+    rm $TMPDIR/sbomgr.timemarker
   fi
   if [[ $SOURCEOPT -eq 0 || "$(readlink -f $SOURCEDIR)" != "$CDIR" ]]; then
     remove_sources $SOURCES
