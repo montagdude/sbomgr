@@ -24,7 +24,7 @@ CONF=${CONF:-/etc/sbomgr/sbomgr.conf}
 #
 # sbomgr version
 #
-VERSION=0.6
+VERSION="0.6_dev"
 
 ################################################################################
 # Removes quotes around string
@@ -124,7 +124,7 @@ function update ()
   
   # Create local git directory if needed
   if [ ! -d "$CDIR" ]; then
-    mkdir $CDIR
+    mkdir -p $CDIR
     cd $CDIR/../
     rm -rf $BASEDIR
     git clone $REPO $BASEDIR
